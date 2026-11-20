@@ -1,0 +1,97 @@
+// Qafila — documents PDF (wkhtmltopdf).
+// Document comptable sobre : encre sur blanc, filets fins, aucune boîte colorée ni tampon décoratif.
+// wkhtmltopdf ne lit ni woff2 ni polices variables → TTF statiques ; tableaux plutôt que flex.
+@font-face { font-family: "QF Text"; src: url("/qafila_facture/static/fonts/FamiljenGrotesk-400.ttf") format("truetype"); font-weight: normal; font-style: normal; }
+@font-face { font-family: "QF Text"; src: url("/qafila_facture/static/fonts/FamiljenGrotesk-700.ttf") format("truetype"); font-weight: bold; font-style: normal; }
+@font-face { font-family: "QF Display"; src: url("/qafila_facture/static/fonts/FunnelDisplay-700.ttf") format("truetype"); font-weight: bold; font-style: normal; }
+
+$ink: #16213A;
+$text-2: #4A5060;
+$rule: #16213A;
+$hair: #D9D5CC;
+$ok: #2F6B4F; $warn: #8A5A12; $critical: #A63D24;
+
+.qf-doc, .qf-doc table, .qf-doc td, .qf-doc th, .qf-doc div, .qf-doc span, .qf-doc p {
+    font-family: "QF Text", "DejaVu Sans", sans-serif;
+    color: $ink;
+}
+.qf-doc { font-size: 9.5pt; line-height: 1.45; }  // pas de font-feature-settings : wkhtmltopdf perd alors les espaces entre segments de texte
+// Remise à zéro des styles de tableaux Odoo ; « separate » évite les filets parasites de wkhtmltopdf
+.qf-doc table { width: 100%; border-collapse: separate; border-spacing: 0; margin: 0; }
+.qf-doc table, .qf-doc tr, .qf-doc td, .qf-doc th { border: 0 !important; background-color: transparent !important; text-align: left; vertical-align: top; }
+.qf-doc th { font-weight: bold; }
+.qf-doc .qf-num { text-align: right !important; white-space: nowrap; }
+.qf-gap { width: 6%; }
+.qf-label { font-size: 8.5pt; font-weight: bold; color: $text-2 !important; margin-bottom: 3px; }
+
+// ---------- En-tête et pied (tous les documents) ----------
+.qf-head td { padding: 0; }
+.qf-head__logo img { height: 40px; }
+.qf-doc .qf-head__company { text-align: right !important; font-size: 8pt; color: $text-2 !important; line-height: 1.5; }
+.qf-head__company strong { color: $ink; font-size: 9.5pt; }
+.qf-rule { margin-top: 10px; border-top: 1.5px solid $rule; }
+
+.qf-doc .qf-foot td { border-top: 1px solid $hair !important; padding-top: 5px; font-size: 7.5pt; color: $text-2 !important; }
+.qf-doc .qf-foot__page { text-align: right !important; white-space: nowrap; width: 18%; }
+.qf-doc-title { font-family: "QF Display", sans-serif; font-weight: bold; font-size: 16pt; margin: 4px 0 12px; }
+
+// ---------- Facture ----------
+.qf-inv { margin-top: -8px; }
+.qf-title td { vertical-align: bottom !important; padding-bottom: 12px; }
+.qf-title__h { margin: 0; font-family: "QF Display", sans-serif !important; font-weight: bold; font-size: 17pt; letter-spacing: -0.2px; }
+.qf-doc .qf-title__status { text-align: right !important; }
+.qf-status { font-weight: bold; font-size: 9.5pt; }
+.qf-status--ok { color: $ok !important; }
+.qf-status--warn { color: $warn !important; }
+.qf-status--critical { color: $critical !important; }
+.qf-status--muted { color: $text-2 !important; font-weight: normal; }
+
+.qf-parties { margin-bottom: 18px !important; }
+.qf-doc table.qf-lines { margin-top: 4px !important; }
+.qf-parties td { padding: 0; }
+.qf-parties__client { width: 47%; }
+.qf-parties__refs { width: 47%; }
+.qf-client-name { font-weight: bold; font-size: 11pt; margin-bottom: 1px; }
+.qf-parties address { margin: 0; }
+.qf-doc .qf-kv th, .qf-doc .qf-kv td { padding: 3px 0; border-bottom: 1px solid $hair !important; font-size: 9pt; }
+.qf-doc .qf-kv th { font-weight: normal; color: $text-2 !important; }
+.qf-doc .qf-kv td { text-align: right !important; font-weight: bold; }
+
+.qf-doc .qf-lines thead th {
+    font-size: 8.5pt; padding: 0 6px 5px; border-bottom: 1.5px solid $rule !important; white-space: nowrap;
+}
+.qf-doc .qf-lines tbody td { padding: 6px 6px; border-bottom: 1px solid $hair !important; font-size: 9pt; }
+.qf-doc .qf-lines th:first-child, .qf-doc .qf-lines td:first-child { padding-left: 0; }
+.qf-doc .qf-lines th:last-child, .qf-doc .qf-lines td:last-child { padding-right: 0; }
+.qf-doc .qf-c-ref { width: 11%; color: $text-2 !important; white-space: nowrap; }
+.qf-c-uom { width: 8%; color: $text-2; }
+.qf-item { font-weight: bold; }
+.qf-desc { color: $text-2 !important; font-size: 8pt; margin-top: 1px; }
+.qf-section td { font-weight: bold; padding-top: 10px !important; }
+.qf-note td { font-style: italic; color: $text-2 !important; }
+
+.qf-sum { margin-top: 12px; page-break-inside: avoid; }
+.qf-sum td { padding: 0; }
+.qf-sum__vat { width: 50%; }
+.qf-sum__totals { width: 44%; }
+.qf-doc .qf-vat th { font-size: 8pt; color: $text-2 !important; padding: 0 0 3px; border-bottom: 1px solid $hair !important; }
+.qf-doc .qf-vat td { font-size: 8.5pt; padding: 3px 0; border-bottom: 1px solid $hair !important; }
+.qf-doc .qf-totals th, .qf-doc .qf-totals td { padding: 4px 0; font-size: 9.5pt; }
+.qf-doc .qf-totals th { font-weight: normal; color: $text-2 !important; }
+.qf-doc .qf-totals td { text-align: right !important; white-space: nowrap; }
+.qf-doc .qf-totals__grand th, .qf-doc .qf-totals__grand td {
+    border-top: 1.5px solid $rule !important; padding-top: 6px; font-weight: bold; font-size: 11pt; color: $ink !important;
+}
+.qf-doc .qf-totals__due th, .qf-doc .qf-totals__due td { font-weight: bold; color: $ink !important; }
+
+.qf-words { margin: 16px 0 0; padding: 8px 0; border-top: 1px solid $hair; border-bottom: 1px solid $hair; font-size: 9.5pt; page-break-inside: avoid; }
+
+.qf-pay { margin-top: 18px; page-break-inside: avoid; }
+.qf-pay td { padding: 0; }
+.qf-pay__info { width: 52%; font-size: 9pt; }
+.qf-pay__note { margin-top: 4px; color: $text-2 !important; font-size: 8pt; }
+.qf-pay__sign { width: 42%; }
+.qf-pay__space { height: 70px; border-bottom: 1px solid $hair; }
+
+// wkhtmltopdf réduit l'espace avant un élément en ligne : espace explicite
+.qf-gapl { margin-left: 0.3em; }

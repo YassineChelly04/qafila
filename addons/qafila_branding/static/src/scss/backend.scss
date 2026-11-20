@@ -1,0 +1,31 @@
+// Qafila — retouches du client web
+.o_web_client {
+    // chiffres alignés dans les listes, montants et références
+    .o_list_renderer, .o_field_monetary, .o_field_float, .o_kanban_record .o_kanban_counter {
+        font-variant-numeric: tabular-nums;
+    }
+}
+
+// Titres d'enregistrements et d'applications en Funnel Display
+.o_form_view .oe_title h1,
+.o_form_view .oe_title .o_field_widget,
+.o_control_panel .o_breadcrumb .active,
+.o_home_menu .o_caption {
+    font-family: "Funnel Display", "Familjen Grotesk", sans-serif;
+    letter-spacing: -0.01em;
+}
+
+// Barre de navigation : liseré Brique de Tozeur, rappel de la route
+.o_main_navbar {
+    border-bottom: 2px solid #C27C2C;
+    .o_menu_brand {
+        font-family: "Funnel Display", "Familjen Grotesk", sans-serif;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+    }
+}
+
+// Texte arabe éventuel : Thmanyah
+[lang="ar"], :lang(ar) {
+    font-family: "Thmanyah Sans", "Noto Sans Arabic", sans-serif;
+}

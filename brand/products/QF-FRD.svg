@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+<rect width="200" height="200" rx="28" fill="#EAD9BE"/>
+<path d="M0 160 H200" stroke="#16213A" stroke-opacity=".12" stroke-width="2"/>
+<path d="M30 160 V70 L100 38 L170 70 V160" fill="#1F5FAD"/>
+<rect x="48" y="86" width="104" height="74" fill="#F7F3EA"/>
+<g stroke="#1F5FAD" stroke-width="6" stroke-linecap="round"><path d="M100 96 v52 M78 109 l44 26 M78 135 l44 -26"/></g>
+<text x="100" y="64" font-family="Familjen Grotesk" font-size="14" font-weight="800" fill="#F7F3EA" text-anchor="middle">2–8 °C</text>
+</svg>

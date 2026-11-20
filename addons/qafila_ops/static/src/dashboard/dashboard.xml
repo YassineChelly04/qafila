@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="qafila_ops.Dashboard">
+        <div class="o_action qf-ops">
+            <div class="qf-ops__page">
+
+                <!-- En-tête de page : titre descriptif, période, fraîcheur des données -->
+                <header class="qf-ops__head">
+                    <div>
+                        <h1 class="qf-ops__title">Tableau d'exploitation</h1>
+                        <p class="qf-ops__meta" t-if="state.data">
+                            <t t-esc="state.data.date_label"/> · données mises à jour à <t t-esc="state.data.updated"/>
+                        </p>
+                    </div>
+                    <button class="btn btn-secondary btn-sm" t-on-click="() => this.load()" t-att-disabled="state.loading">
+                        <i t-attf-class="fa fa-refresh me-1 {{state.loading ? 'fa-spin' : ''}}"/> Actualiser
+                    </button>
+                </header>
+
+                <!-- Erreur : à la place du contenu, avec l'action pour s'en sortir -->
+                <div class="qf-panel qf-state" t-if="state.error">
+                    <strong>Impossible de charger le tableau d'exploitation.</strong>
+                    Vérifiez la connexion à l'ERP puis réessayez.
+                    <button class="btn btn-primary btn-sm ms-2" t-on-click="() => this.load()">Réessayer</button>
+                </div>
+
+                <!-- Chargement : squelette à la forme de l'écran -->
+                <t t-elif="!state.data">
+                    <div class="qf-panel qf-skel"><span class="qf-skel__line w-25"/><span class="qf-skel__line w-75"/><span class="qf-skel__line w-50"/></div>
+                    <div class="qf-band qf-skel"><span class="qf-skel__block"/><span class="qf-skel__block"/><span class="qf-skel__block"/><span class="qf-skel__block"/></div>
+                    <div class="qf-panel qf-skel" style="height: 260px"/>
+                </t>
+
+                <t t-else="">
+                    <t t-set="d" t-value="state.data"/>
+
+                    <!-- 1. À traiter -->
+                    <section class="qf-panel qf-attn">
+                        <h2 class="qf-h2">À traiter <span class="qf-count" t-esc="d.attention.length"/></h2>
+                        <ul class="qf-attn__list" t-if="d.attention.length">
+                            <li t-foreach="d.attention" t-as="a" t-key="a_index">
+                                <button class="qf-attn__row" t-on-click="() => this.run(a.action)">
+                                    <span t-attf-class="qf-badge qf-badge--{{a.level}}"><t t-esc="levelLabel[a.level]"/></span>
+                                    <span class="qf-attn__text" t-esc="a.text"/>
+                                    <span class="qf-attn__detail" t-esc="a.detail"/>
+                                    <i class="fa fa-angle-right qf-attn__go" aria-hidden="true"/>
+                                </button>
+                            </li>
+                        </ul>
+                        <p class="qf-empty" t-else="">Aucune alerte : expéditions, flotte et factures sont à jour.</p>
+                    </section>
+
+                    <!-- 2. Bandeau d'indicateurs : un indicateur principal, les autres en contexte -->
+                    <section class="qf-band">
+                        <div class="qf-band__cell qf-band__cell--anchor">
+                            <button class="qf-band__label qf-link" t-on-click="() => this.open('shipments')">Expéditions en cours</button>
+                            <div class="qf-band__anchor">
+                                <span class="qf-band__big" t-esc="d.band.shipments.value"/>
+                                <div class="qf-band__split">
+                                    <button class="qf-link" t-on-click="() => this.open('en_route')" t-esc="d.band.shipments.en_route"/>
+                                    <button class="qf-link" t-on-click="() => this.open('prepare')" t-esc="d.band.shipments.prepare"/>
+                                    <button class="qf-link" t-on-click="() => this.open('recu')" t-esc="d.band.shipments.recu"/>
+                                </div>
+                            </div>
+                            <button class="qf-band__ctx qf-link" t-on-click="() => this.open('delivered')" t-esc="d.band.shipments.delivered_30"/>
+                        </div>
+                        <button class="qf-band__cell" t-on-click="() => this.open('ca')">
+                            <span class="qf-band__label" t-esc="d.band.ca.label"/>
+                            <span class="qf-band__value" t-esc="d.band.ca.value"/>
+                            <span class="qf-band__ctx" t-esc="d.band.ca.context"/>
+                        </button>
+                        <button class="qf-band__cell" t-on-click="() => this.open('due')">
+                            <span class="qf-band__label">À encaisser</span>
+                            <span class="qf-band__value" t-esc="d.band.due.value"/>
+                            <span t-attf-class="qf-band__ctx {{d.band.due.alert ? 'qf-text-critical' : ''}}" t-esc="d.band.due.context"/>
+                        </button>
+                        <button class="qf-band__cell" t-on-click="() => this.open('fleet')">
+                            <span class="qf-band__label">Camions disponibles</span>
+                            <span class="qf-band__value" t-esc="d.band.fleet.value"/>
+                            <span class="qf-band__ctx" t-esc="d.band.fleet.context"/>
+                        </button>
+                    </section>
+
+                    <div class="qf-cols qf-cols--main">
+                        <div class="qf-stack">
+                        <!-- 3. Expéditions : le tableau de travail -->
+                        <section class="qf-panel">
+                            <header class="qf-panel__head">
+                                <h2 class="qf-h2">Expéditions en cours</h2>
+                                <button class="qf-link" t-on-click="() => this.open('shipments')">Ouvrir la liste</button>
+                            </header>
+                            <div class="qf-table-wrap" t-if="d.shipments.length">
+                                <table class="qf-table">
+                                    <colgroup><col style="width:17%"/><col style="width:24%"/><col style="width:18%"/><col style="width:13%"/><col style="width:14%"/><col style="width:14%"/></colgroup>
+                                    <thead><tr><th>Référence</th><th>Client</th><th>Destination</th><th>Camion</th><th class="qf-r">Prévue le</th><th>Étape</th></tr></thead>
+                                    <tbody>
+                                        <tr t-foreach="d.shipments" t-as="s" t-key="s.id" t-on-click="() => this.openRecord('stock.picking', s.id)">
+                                            <td class="qf-strong qf-nowrap" t-esc="s.name"/>
+                                            <td class="qf-ellipsis" t-att-title="s.client" t-esc="s.client"/>
+                                            <td class="qf-ellipsis" t-esc="s.city"/>
+                                            <td class="qf-nowrap"><t t-if="s.vehicle" t-esc="s.vehicle"/><span t-else="" class="qf-muted">Non affecté</span></td>
+                                            <td t-attf-class="qf-r qf-nowrap {{s.late ? 'qf-text-critical' : ''}}" t-esc="s.date"/>
+                                            <td><span t-attf-class="qf-badge qf-badge--{{s.stage === 'en_route' ? 'info' : s.stage === 'livre' ? 'success' : 'neutral'}}" t-att-title="s.stage_title" t-esc="s.stage_label"/></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                                <button class="qf-more qf-link" t-if="d.shipments_more" t-on-click="() => this.open('shipments')">
+                                    Voir les <t t-esc="d.shipments_more"/> autres expéditions
+                                </button>
+                            </div>
+                            <p class="qf-empty" t-else="">Aucune expédition en cours. Les commandes confirmées apparaîtront ici dès leur préparation.</p>
+                        </section>
+
+                        <!-- 5. Maintenance -->
+                        <section class="qf-panel">
+                            <header class="qf-panel__head">
+                                <h2 class="qf-h2">Interventions ouvertes <span class="qf-count" t-esc="d.requests_open"/></h2>
+                                <button class="qf-link" t-on-click="() => this.open('requests')">Ouvrir la maintenance</button>
+                            </header>
+                            <div class="qf-table-wrap" t-if="d.requests.length">
+                                <table class="qf-table">
+                                    <colgroup><col style="width:36%"/><col style="width:22%"/><col style="width:14%"/><col style="width:12%"/><col style="width:16%"/></colgroup>
+                                    <thead><tr><th>Intervention</th><th>Équipement</th><th>Type</th><th>Priorité</th><th class="qf-r">Prévue le</th></tr></thead>
+                                    <tbody>
+                                        <tr t-foreach="d.requests" t-as="r" t-key="r.id" t-on-click="() => this.openRecord('maintenance.request', r.id)">
+                                            <td class="qf-ellipsis" t-att-title="r.name">
+                                                <span class="qf-strong" t-esc="r.name"/>
+                                                <span class="qf-muted" t-if="r.in_progress"> · en cours</span>
+                                            </td>
+                                            <td class="qf-ellipsis" t-esc="r.asset"/>
+                                            <td t-esc="r.type"/>
+                                            <td><span t-attf-class="qf-badge qf-badge--{{r.high ? 'warning' : 'neutral'}}" t-esc="r.priority"/></td>
+                                            <td class="qf-r qf-nowrap" t-esc="r.date"/>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <p class="qf-empty" t-else="">Aucune intervention ouverte.</p>
+                        </section>
+
+                        </div>
+                        <div class="qf-stack">
+                        <!-- 4. Flotte : disponibilité, exceptions, échéances -->
+                        <section class="qf-panel">
+                            <header class="qf-panel__head">
+                                <h2 class="qf-h2">Flotte <span class="qf-count" t-esc="d.fleet_total"/></h2>
+                                <button class="qf-link" t-on-click="() => this.open('fleet')">Ouvrir la flotte</button>
+                            </header>
+                            <div class="qf-seg" role="img" t-att-aria-label="d.fleet.map(f => f.count + ' ' + f.label).join(', ')">
+                                <t t-foreach="d.fleet" t-as="f" t-key="f.code">
+                                    <span t-if="f.count" t-attf-class="qf-seg__part qf-fill--{{f.code}}" t-attf-style="flex-grow: {{f.count}}" t-att-title="f.count + ' ' + f.label"/>
+                                </t>
+                            </div>
+                            <ul class="qf-legend">
+                                <li t-foreach="d.fleet" t-as="f" t-key="f.code"><span t-attf-class="qf-dot qf-fill--{{f.code}}"/><b t-esc="f.count"/> <t t-esc="f.label"/></li>
+                            </ul>
+                            <h3 class="qf-h3">Hors disponibilité</h3>
+                            <ul class="qf-rows" t-if="d.fleet_exceptions.length">
+                                <li t-foreach="d.fleet_exceptions" t-as="v" t-key="v.id">
+                                    <button class="qf-rows__row" t-on-click="() => this.openRecord('fleet.vehicle', v.id)">
+                                        <span class="qf-strong qf-nowrap" t-esc="v.plate"/>
+                                        <span class="qf-ellipsis qf-muted" t-esc="v.reason"/>
+                                        <span t-attf-class="qf-badge qf-badge--st-{{v.status}}" t-esc="v.status_label"/>
+                                    </button>
+                                </li>
+                            </ul>
+                            <p class="qf-empty" t-else="">Tous les camions sont disponibles.</p>
+                            <h3 class="qf-h3">Échéances sous 30 jours</h3>
+                            <ul class="qf-rows" t-if="d.deadlines.length">
+                                <li t-foreach="d.deadlines" t-as="dl" t-key="dl_index">
+                                    <button class="qf-rows__row" t-on-click="() => this.openRecord('fleet.vehicle', dl.id)">
+                                        <span class="qf-strong qf-nowrap" t-esc="dl.who"/>
+                                        <span class="qf-ellipsis qf-muted" t-esc="dl.what"/>
+                                        <span class="qf-nowrap qf-num" t-esc="dl.date"/>
+                                    </button>
+                                </li>
+                            </ul>
+                            <p class="qf-empty" t-else="">Aucune visite technique ni assurance à renouveler ce mois-ci.</p>
+                        </section>
+                        <!-- 6. Chiffre d'affaires par client : un titre qui dit ce que montre le graphique -->
+                        <section class="qf-panel">
+                            <header class="qf-panel__head qf-panel__head--stack">
+                                <h2 class="qf-h2" t-esc="d.revenue_headline or 'Chiffre d\'affaires par client'"/>
+                                <span class="qf-muted qf-small">Chiffre d'affaires facturé HT par client, <t t-esc="d.revenue_year"/></span>
+                            </header>
+                            <div class="qf-bars" t-if="d.revenue.length" t-on-mouseleave="() => this.hideTip()">
+                                <button t-foreach="d.revenue" t-as="row" t-key="row.id" class="qf-bar"
+                                        t-on-mousemove="(ev) => this.showTip(ev, row)" t-on-click="() => this.openClientInvoices(row)">
+                                    <span class="qf-bar__name qf-ellipsis" t-esc="row.name"/>
+                                    <span class="qf-bar__track"><span class="qf-bar__fill" t-attf-style="width: {{row.pct}}%"/></span>
+                                    <span class="qf-bar__value qf-num" t-esc="row.label"/>
+                                </button>
+                                <div class="qf-tip" t-if="state.tip" t-att-style="tipStyle" t-esc="state.tip.text"/>
+                            </div>
+                            <p class="qf-empty" t-else="">Aucune facture validée cette année. Les montants apparaîtront à la première facture.</p>
+                            <button class="qf-foot qf-link" t-on-click="() => this.open('stock')">
+                                Stock palettes EPAL :
+                                <t t-foreach="d.stock" t-as="w" t-key="w_index"><t t-if="w_index"> · </t><t t-esc="w.name"/> <b t-esc="w.pallets"/></t>
+                            </button>
+                        </section>
+                        </div>
+                    </div>
+                </t>
+            </div>
+        </div>
+    </t>
+</templates>

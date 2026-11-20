@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="hr_equipment_view_form_qafila" model="ir.ui.view">
+        <field name="name">maintenance.equipment.form.qafila</field>
+        <field name="model">maintenance.equipment</field>
+        <field name="inherit_id" ref="maintenance.hr_equipment_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='serial_no']" position="after">
+                <field name="qafila_vehicle_id"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="hr_equipment_request_view_tree_qafila" model="ir.ui.view">
+        <field name="name">maintenance.request.list.qafila</field>
+        <field name="model">maintenance.request</field>
+        <field name="inherit_id" ref="maintenance.hr_equipment_request_view_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='name']" position="after">
+                <field name="qafila_vehicle_id" optional="show"/>
+                <field name="maintenance_type" optional="show"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

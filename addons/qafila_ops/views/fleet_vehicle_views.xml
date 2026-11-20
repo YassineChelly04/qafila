@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="fleet_vehicle_view_form_qafila" model="ir.ui.view">
+        <field name="name">fleet.vehicle.form.qafila</field>
+        <field name="model">fleet.vehicle</field>
+        <field name="inherit_id" ref="fleet.fleet_vehicle_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <button name="action_qafila_breakdown" type="object" string="Déclarer une panne" class="btn-secondary"
+                        invisible="qafila_status == 'immobilise'"/>
+            </xpath>
+            <xpath expr="//div[hasclass('oe_button_box')]" position="inside">
+                <button name="action_qafila_open_requests" type="object" class="oe_stat_button" icon="fa-wrench">
+                    <field name="qafila_open_request_count" widget="statinfo" string="Interventions"/>
+                </button>
+            </xpath>
+            <xpath expr="//notebook" position="before">
+                <group string="Exploitation Qafila" name="qafila">
+                    <group>
+                        <field name="qafila_status" widget="badge"
+                               decoration-success="qafila_status == 'disponible'" decoration-info="qafila_status == 'en_tournee'"
+                               decoration-warning="qafila_status == 'maintenance'" decoration-danger="qafila_status == 'immobilise'"/>
+                        <field name="qafila_payload"/>
+                        <field name="qafila_pallets"/>
+                        <field name="qafila_reefer"/>
+                    </group>
+                    <group>
+                        <field name="qafila_warehouse_id"/>
+                        <field name="qafila_inspection_date"/>
+                        <field name="qafila_immobilised"/>
+                    </group>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="fleet_vehicle_view_tree_qafila" model="ir.ui.view">
+        <field name="name">fleet.vehicle.list.qafila</field>
+        <field name="model">fleet.vehicle</field>
+        <field name="inherit_id" ref="fleet.fleet_vehicle_view_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='license_plate']" position="after">
+                <field name="qafila_status" widget="badge"
+                       decoration-success="qafila_status == 'disponible'" decoration-info="qafila_status == 'en_tournee'"
+                       decoration-warning="qafila_status == 'maintenance'" decoration-danger="qafila_status == 'immobilise'"/>
+                <field name="qafila_payload" optional="show"/>
+                <field name="qafila_pallets" optional="show"/>
+                <field name="qafila_warehouse_id" optional="show"/>
+                <field name="qafila_inspection_date" optional="show"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="fleet_vehicle_view_search_qafila" model="ir.ui.view">
+        <field name="name">fleet.vehicle.search.qafila</field>
+        <field name="model">fleet.vehicle</field>
+        <field name="inherit_id" ref="fleet.fleet_vehicle_view_search"/>
+        <field name="arch" type="xml">
+            <xpath expr="//search" position="inside">
+                <separator/>
+                <filter name="qf_available" string="Disponibles" domain="[('qafila_status', '=', 'disponible')]"/>
+                <filter name="qf_road" string="En tournée" domain="[('qafila_status', '=', 'en_tournee')]"/>
+                <filter name="qf_maint" string="En maintenance" domain="[('qafila_status', 'in', ('maintenance', 'immobilise'))]"/>
+                <filter name="qf_reefer" string="Frigorifiques" domain="[('qafila_reefer', '=', True)]"/>
+                <group>
+                    <filter name="qf_group_status" string="Statut d'exploitation" context="{'group_by': 'qafila_status'}"/>
+                    <filter name="qf_group_base" string="Base" context="{'group_by': 'qafila_warehouse_id'}"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+</odoo>

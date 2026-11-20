@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Mise en page Qafila pour tous les documents PDF (devis, livraisons, factures).
+         Tableaux plutôt que flex : wkhtmltopdf (WebKit ancien) les rend fidèlement. -->
+    <template id="external_layout_qafila">
+        <div t-attf-class="header qf-doc o_company_#{company.id}_layout">
+            <table class="qf-head">
+                <tr>
+                    <td class="qf-head__logo">
+                        <img src="/qafila_facture/static/img/qafila-logo.png" alt="Qafila"/>
+                    </td>
+                    <td class="qf-head__company">
+                        <strong t-field="company.name"/><br/>
+                        <span t-field="company.street"/><t t-if="company.street2"> · <span t-field="company.street2"/></t><br/>
+                        <span t-field="company.zip"/> <span t-field="company.city"/>, <span t-field="company.country_id.name"/><br/>
+                        <t t-if="company.phone">Tél. <span t-field="company.phone"/></t>
+                        <t t-if="company.email"> · <span t-field="company.email"/></t><br/>
+                        <t t-if="company.vat">MF <span t-field="company.vat"/></t>
+                        <t t-if="company.company_registry"> · RC <span t-field="company.company_registry"/></t>
+                    </td>
+                </tr>
+            </table>
+            <div class="qf-rule"/>
+        </div>
+
+        <div t-attf-class="article qf-doc o_report_layout_qafila o_company_#{company.id}_layout"
+             t-att-data-oe-model="o and o._name"
+             t-att-data-oe-id="o and o.id"
+             t-att-data-oe-lang="o and o.env.context.get('lang')">
+            <t t-call="web.address_layout"/>
+            <h2 class="qf-doc-title" t-if="layout_document_title" t-out="layout_document_title"/>
+            <t t-out="0"/>
+        </div>
+
+        <div t-attf-class="footer qf-doc o_company_#{company.id}_layout">
+            <table class="qf-foot">
+                <tr>
+                    <td class="qf-foot__legal"><span t-field="company.report_footer"/></td>
+                    <td class="qf-foot__page" t-if="report_type == 'pdf'">
+                        <t t-if="display_name_in_footer" t-out="o.name"/> · Page <span class="page"/>/<span class="topage"/>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </template>
+</odoo>

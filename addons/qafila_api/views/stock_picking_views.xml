@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_picking_form_qafila" model="ir.ui.view">
+        <field name="name">stock.picking.form.qafila</field>
+        <field name="model">stock.picking</field>
+        <field name="inherit_id" ref="stock.view_picking_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <button name="action_qafila_en_route" type="object" string="Marquer en route"
+                        invisible="picking_type_code != 'outgoing' or state in ('done', 'cancel') or qafila_stage == 'en_route'"/>
+            </xpath>
+            <xpath expr="//field[@name='origin']" position="after">
+                <field name="qafila_stage" invisible="picking_type_code != 'outgoing'"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="vpicktree_qafila" model="ir.ui.view">
+        <field name="name">stock.picking.list.qafila</field>
+        <field name="model">stock.picking</field>
+        <field name="inherit_id" ref="stock.vpicktree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='origin']" position="after">
+                <field name="qafila_stage" optional="show" widget="badge"
+                       decoration-success="qafila_stage == 'livre'" decoration-info="qafila_stage == 'en_route'"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

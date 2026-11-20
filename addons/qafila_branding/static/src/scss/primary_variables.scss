@@ -1,0 +1,16 @@
+// Qafila — palette (docs/02-BRAND.md). Chargé AVANT les variables d'Odoo (!default).
+$qf-ink: #16213A;
+$qf-blue: #1F5FAD;
+$qf-brick: #C27C2C;
+$qf-henna: #B4472A;
+$qf-palm: #2F5D46;
+$qf-sand: #EAD9BE;
+$qf-lime: #F7F3EA;
+
+$o-community-color: $qf-blue;
+$o-brand-odoo: $qf-ink;          // barre de navigation
+$o-brand-primary: $qf-blue;      // boutons principaux, liens
+$o-success: $qf-palm;
+
+$o-system-fonts: ("Familjen Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", "Noto Sans Arabic", Arial, sans-serif);
+$o-headings-font-family: ("Funnel Display", "Familjen Grotesk", sans-serif);

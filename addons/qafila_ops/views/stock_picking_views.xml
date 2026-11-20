@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_picking_form_qafila_ops" model="ir.ui.view">
+        <field name="name">stock.picking.form.qafila.ops</field>
+        <field name="model">stock.picking</field>
+        <field name="inherit_id" ref="qafila_api.view_picking_form_qafila"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='qafila_stage']" position="after">
+                <field name="qafila_vehicle_id" invisible="picking_type_code != 'outgoing'" options="{'no_create': True}"/>
+                <field name="qafila_driver_id" invisible="not qafila_vehicle_id"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="vpicktree_qafila_ops" model="ir.ui.view">
+        <field name="name">stock.picking.list.qafila.ops</field>
+        <field name="model">stock.picking</field>
+        <field name="inherit_id" ref="qafila_api.vpicktree_qafila"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='qafila_stage']" position="after">
+                <field name="qafila_vehicle_id" optional="show"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

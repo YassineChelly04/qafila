@@ -1,0 +1,7 @@
+.env
+.runtime/
+.odoo.runtime.conf
+backups/
+landing/assets/fonts/thmanyah/
+addons/qafila_branding/static/fonts/thmanyah/
+config/caddy-root.crt

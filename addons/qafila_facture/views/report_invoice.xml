@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Facture professionnelle Qafila : remplace le corps standard (priorité haute → appliqué en dernier,
+         les autres modules qui héritent du rapport continuent de s'appliquer avant). -->
+    <template id="report_invoice_document_qafila" inherit_id="account.report_invoice_document" priority="99">
+        <xpath expr="//t[@t-call='web.external_layout']" position="replace">
+            <t t-call="web.external_layout">
+                <t t-set="o" t-value="o.with_context(lang=lang)"/>
+                <t t-set="layout_document_title" t-value="''"/><!-- titre géré par la facture elle-même -->
+                <t t-set="address" t-value="False"/><!-- bloc adresse géré par la facture (neutralise les ajouts d'autres modules) -->
+                <t t-set="is_invoice" t-value="o.move_type in ('out_invoice', 'in_invoice')"/>
+                <t t-set="doc_label" t-value="{
+                    'out_invoice': 'Facture', 'out_refund': 'Facture d\'avoir',
+                    'in_invoice': 'Facture fournisseur', 'in_refund': 'Avoir fournisseur'}.get(o.move_type, 'Document')"/>
+                <t t-set="summary" t-value="o._qafila_tax_summary()"/>
+                <t t-set="vat_rows" t-value="summary[0]"/>
+                <t t-set="stamp" t-value="summary[1]"/>
+                <t t-set="lines" t-value="o._qafila_report_lines()"/>
+                <t t-set="cur" t-value="o.currency_id"/>
+
+                <!-- Points d'ancrage attendus par d'autres vues (aperçu de facture, stock_account) : conservés, masqués -->
+                <div class="d-none qf-hooks">
+                    <div id="right-elements"/>
+                    <div id="payment_term"><p name="payment_communication"><t t-if="o.partner_bank_id"/></p></div>
+                    <div id="qrcode"/>
+                </div>
+                <t t-set="money3" t-value="{'widget': 'float', 'precision': 3}"/>
+                <t t-set="paid_date" t-value="max(o._get_reconciled_payments().mapped('date') or [False]) if o.payment_state in ('paid', 'in_payment') else False"/>
+                <div class="qf-inv">
+                    <!-- Titre, numéro et statut en toutes lettres -->
+                    <table class="qf-title">
+                        <tr>
+                            <td>
+                                <h1 class="qf-title__h">
+                                    <t t-out="doc_label"/>
+                                    <t t-if="o.name and o.name != '/'"> n° <t t-out="o.name"/></t>
+                                </h1>
+                            </td>
+                            <td class="qf-title__status">
+                                <t t-if="o.state == 'draft'"><span class="qf-status qf-status--muted">Brouillon : document sans valeur comptable</span></t>
+                                <t t-elif="o.state == 'cancel'"><span class="qf-status qf-status--critical">Annulée</span></t>
+                                <t t-elif="o.payment_state in ('paid', 'in_payment')"><span class="qf-status qf-status--ok">Payée<t t-if="paid_date"> le <t t-out="paid_date.strftime('%d/%m/%Y')"/></t></span></t>
+                                <t t-elif="o.payment_state == 'partial'"><span class="qf-status qf-status--warn">Partiellement payée</span></t>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <!-- Client et références -->
+                    <table class="qf-parties">
+                        <tr>
+                            <td class="qf-parties__client">
+                                <div class="qf-label">Client</div>
+                                <div class="qf-client-name"><span t-field="o.partner_id.commercial_partner_id.name"/></div>
+                                <div t-field="o.partner_id" t-options='{"widget": "contact", "fields": ["address"], "no_marker": True}'/>
+                                <div t-if="o.partner_id.commercial_partner_id.vat">MF <span t-field="o.partner_id.commercial_partner_id.vat"/></div>
+                                <div t-if="o.partner_id.commercial_partner_id.phone">Tél. <span t-field="o.partner_id.commercial_partner_id.phone"/></div>
+                            </td>
+                            <td class="qf-gap"/>
+                            <td class="qf-parties__refs">
+                                <table class="qf-kv">
+                                    <tr t-if="o.invoice_date"><th>Date de facture</th><td><span t-field="o.invoice_date"/></td></tr>
+                                    <tr t-if="o.invoice_date_due and is_invoice"><th>Date d'échéance</th><td><span t-field="o.invoice_date_due"/></td></tr>
+                                    <tr t-if="o.invoice_payment_term_id"><th>Conditions de paiement</th><td><span t-field="o.invoice_payment_term_id.name"/></td></tr>
+                                    <tr t-if="o.invoice_origin"><th>Bon de commande</th><td><span t-field="o.invoice_origin"/></td></tr>
+                                    <tr t-if="o.ref"><th>Référence client</th><td><span t-field="o.ref"/></td></tr>
+                                    <tr t-if="o.invoice_user_id"><th>Suivi par</th><td><span t-field="o.invoice_user_id.name"/></td></tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <!-- Lignes : montants en DT, devise dans l'en-tête -->
+                    <t t-set="has_discount" t-value="any(l.discount for l in lines)"/>
+                    <table class="qf-lines">
+                        <thead>
+                            <tr>
+                                <th class="qf-c-ref">Réf.</th>
+                                <th>Désignation</th>
+                                <th class="qf-num">Qté</th>
+                                <th class="qf-c-uom">Unité</th>
+                                <th class="qf-num">P.U. HT (DT)</th>
+                                <th class="qf-num" t-if="has_discount">Remise</th>
+                                <th class="qf-num">TVA</th>
+                                <th class="qf-num">Total HT (DT)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-foreach="lines" t-as="line">
+                                <tr t-if="line.display_type == 'line_section'" class="qf-section">
+                                    <td t-att-colspan="8 if has_discount else 7"><span t-field="line.name"/></td>
+                                </tr>
+                                <tr t-elif="line.display_type == 'line_note'" class="qf-note">
+                                    <td t-att-colspan="8 if has_discount else 7"><span t-field="line.name"/></td>
+                                </tr>
+                                <tr t-elif="line.display_type == 'product'">
+                                    <td class="qf-c-ref"><span t-out="line.product_id.default_code or ''"/></td>
+                                    <td>
+                                        <div class="qf-item"><t t-out="line.product_id.name or line.name"/></div>
+                                        <div class="qf-desc" t-if="line.name and '\n' in line.name" t-out="line.name.split('\n', 1)[1]"/>
+                                    </td>
+                                    <td class="qf-num"><span t-field="line.quantity" t-options='{"widget": "float", "precision": 2}'/></td>
+                                    <td class="qf-c-uom"><span t-field="line.product_uom_id.name"/></td>
+                                    <td class="qf-num"><span t-field="line.price_unit" t-options="money3"/></td>
+                                    <td class="qf-num" t-if="has_discount"><t t-if="line.discount" t-out="'%g %%' % line.discount"/></td>
+                                    <td class="qf-num"><span t-out="', '.join(t.invoice_label or t.name for t in line.tax_ids) or '—'"/></td>
+                                    <td class="qf-num"><span t-field="line.price_subtotal" t-options="money3"/></td>
+                                </tr>
+                            </t>
+                        </tbody>
+                    </table>
+
+                    <!-- Récapitulatif TVA et totaux -->
+                    <table class="qf-sum">
+                        <tr>
+                            <td class="qf-sum__vat">
+                                <table class="qf-vat" t-if="vat_rows">
+                                    <thead><tr><th>Taux de TVA</th><th class="qf-num">Base HT (DT)</th><th class="qf-num">Montant TVA (DT)</th></tr></thead>
+                                    <tbody>
+                                        <tr t-foreach="vat_rows" t-as="row">
+                                            <td><span t-out="row[0]"/></td>
+                                            <td class="qf-num"><span t-out="row[1]" t-options="money3"/></td>
+                                            <td class="qf-num"><span t-out="row[2]" t-options="money3"/></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </td>
+                            <td class="qf-gap"/>
+                            <td class="qf-sum__totals">
+                                <table class="qf-totals">
+                                    <tr><th>Total HT</th><td><span t-out="o._qafila_untaxed()" t-options="money3"/></td></tr>
+                                    <tr t-foreach="vat_rows" t-as="row"><th><span t-out="row[0]"/></th><td><span t-out="row[2]" t-options="money3"/></td></tr>
+                                    <tr t-if="stamp"><th>Droit de timbre</th><td><span t-out="stamp" t-options="money3"/></td></tr>
+                                    <tr class="qf-totals__grand"><th>Net à payer TTC</th><td><span t-field="o.amount_total"/></td></tr>
+                                    <t t-if="o.state == 'posted' and o.payment_state != 'not_paid' and o.amount_residual != o.amount_total">
+                                        <tr><th>Déjà réglé</th><td><span t-out="o.amount_total - o.amount_residual" t-options="money3"/></td></tr>
+                                        <tr class="qf-totals__due"><th>Reste à payer</th><td><span t-field="o.amount_residual"/></td></tr>
+                                    </t>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <!-- Mention légale du montant en toutes lettres -->
+                    <p class="qf-words">
+                        Arrêtée la présente <t t-out="doc_label.lower()"/> à la somme de&#160;:<strong class="qf-gapl" t-out="o._qafila_amount_in_words()"/> toutes taxes comprises.
+                    </p>
+
+                    <!-- Règlement et signature -->
+                    <table class="qf-pay">
+                        <tr>
+                            <td class="qf-pay__info">
+                                <div class="qf-label">Règlement</div>
+                                <div>Virement bancaire<t t-if="o.invoice_date_due and is_invoice"> <t t-out="' avant le ' + o.invoice_date_due.strftime('%d/%m/%Y')"/></t>.</div>
+                                <t t-set="qf_bank" t-value="o.partner_bank_id or o.company_id.partner_id.bank_ids[:1]"/>
+                                <div t-if="qf_bank and o.move_type == 'out_invoice'">
+                                    <span t-out="qf_bank.bank_id.name or ''"/>, RIB<strong class="qf-gapl" t-out="qf_bank.acc_number"/>
+                                    <t t-if="qf_bank.bank_id.bic">, BIC <span t-out="qf_bank.bank_id.bic"/></t>
+                                </div>
+                                <div t-if="o.payment_reference">Merci d'indiquer la référence<strong class="qf-gapl" t-out="o.payment_reference"/> sur votre virement.</div>
+                                <div class="qf-pay__note" t-if="o.narration" t-field="o.narration"/>
+                            </td>
+                            <td class="qf-gap"/>
+                            <td class="qf-pay__sign">
+                                <div class="qf-label">Cachet et signature</div>
+                                <div class="qf-pay__space"/>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </t>
+        </xpath>
+    </template>
+</odoo>

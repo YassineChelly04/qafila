@@ -1,0 +1,85 @@
+# Qafila — pile mono-hôte (modèle / démonstration)
+# Compatible podman-compose et Docker Compose.
+#   Caddy (TLS local, qafila.tn + erp.qafila.tn)
+#     ├─ landing statique (landing/)
+#     └─ répartition de charge → odoo-1 + odoo-2 → db (PostgreSQL 16)
+name: qafila
+
+x-odoo: &odoo
+  image: docker.io/library/odoo:19.0
+  command: ["odoo", "-c", "/etc/odoo/odoo.conf"]
+  depends_on:
+    db:
+      condition: service_healthy
+  volumes:
+    - ./.runtime/odoo.conf:/etc/odoo/odoo.conf:ro,Z
+    - ./addons:/mnt/extra-addons:ro,z
+    - qafila-filestore:/var/lib/odoo:z
+  networks: [backend]
+  restart: unless-stopped
+  security_opt: ["no-new-privileges:true"]
+  mem_limit: 900m
+  healthcheck:
+    test: ["CMD", "python3", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8069/web/health',timeout=5)"]
+    interval: 20s
+    timeout: 8s
+    retries: 5
+    start_period: 60s
+
+services:
+  db:
+    container_name: qafila-db
+    image: docker.io/library/postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - qafila-pg:/var/lib/postgresql/data:Z
+    networks: [backend]
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  odoo-1:
+    <<: *odoo
+    hostname: odoo-1
+    container_name: qafila-odoo-1
+
+  odoo-2:
+    <<: *odoo
+    hostname: odoo-2
+    container_name: qafila-odoo-2
+
+  caddy:
+    container_name: qafila-caddy
+    image: docker.io/library/caddy:2-alpine
+    depends_on: [odoo-1, odoo-2]
+    environment:
+      ODOO_UPSTREAMS: "odoo-1:8069 odoo-2:8069"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./config/Caddyfile:/etc/caddy/Caddyfile:ro,Z
+      - ./landing:/srv/landing:ro,z
+      - caddy-data:/data:Z
+      - caddy-config:/config:Z
+    networks: [backend]
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 128m
+
+networks:
+  backend: {}
+
+volumes:
+  qafila-pg: {}
+  qafila-filestore: {}
+  caddy-data: {}
+  caddy-config: {}

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+<rect width="200" height="200" rx="28" fill="#EAD9BE"/>
+<path d="M0 160 H200" stroke="#16213A" stroke-opacity=".12" stroke-width="2"/>
+<g>
+<rect x="14" y="74" width="119.6" height="66.69999999999999" rx="6.8999999999999995" fill="#16213A"/>
+<path d="M133.6 92.4 h27.599999999999998 l18.4 20.7 v27.599999999999998 h-46.0 z" fill="#16213A"/>
+<rect x="140.5" y="98.15" width="16.099999999999998" height="13.799999999999999" rx="2" fill="#F7F3EA" opacity=".85"/>
+<circle cx="41.599999999999994" cy="145.3" r="12.649999999999999" fill="#16213A"/><circle cx="41.599999999999994" cy="145.3" r="4.6" fill="#EAD9BE"/>
+<circle cx="152.0" cy="145.3" r="12.649999999999999" fill="#16213A"/><circle cx="152.0" cy="145.3" r="4.6" fill="#EAD9BE"/>
+<text x="73.8" y="108.5" font-family="Familjen Grotesk" font-weight="700" font-size="17.25" fill="#F7F3EA" text-anchor="middle">19 t</text></g><text x="100" y="48" font-family="Familjen Grotesk" font-size="20" font-weight="800" fill="#1F5FAD" text-anchor="middle">CAMION COMPLET</text>
+</svg>

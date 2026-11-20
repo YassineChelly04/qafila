@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+<rect width="200" height="200" rx="28" fill="#EAD9BE"/>
+<path d="M0 160 H200" stroke="#16213A" stroke-opacity=".12" stroke-width="2"/>
+<path d="M34 50 C 80 20 120 70 166 40" fill="none" stroke="#C27C2C" stroke-width="3" stroke-dasharray="5 7" stroke-linecap="round"/>
+<circle cx="34" cy="50" r="7" fill="#C27C2C"/><circle cx="166" cy="40" r="8" fill="#B4472A"/>
+<text x="34" y="74" font-family="Familjen Grotesk" font-size="12" font-weight="700" fill="#16213A" text-anchor="middle">Tunis</text>
+<text x="166" y="64" font-family="Familjen Grotesk" font-size="12" font-weight="700" fill="#16213A" text-anchor="middle">Tozeur</text><g>
+<rect x="30" y="88" width="104.0" height="58.0" rx="6.0" fill="#1F5FAD"/>
+<path d="M134.0 104.0 h24.0 l16.0 18.0 v24.0 h-40.0 z" fill="#16213A"/>
+<rect x="140.0" y="109.0" width="14.0" height="12.0" rx="2" fill="#F7F3EA" opacity=".85"/>
+<circle cx="54.0" cy="150.0" r="11.0" fill="#16213A"/><circle cx="54.0" cy="150.0" r="4.0" fill="#EAD9BE"/>
+<circle cx="150.0" cy="150.0" r="11.0" fill="#16213A"/><circle cx="150.0" cy="150.0" r="4.0" fill="#EAD9BE"/>
+<text x="82.0" y="118.0" font-family="Familjen Grotesk" font-weight="700" font-size="15.0" fill="#F7F3EA" text-anchor="middle">QAFILA</text></g><g fill="#2F5D46"><path d="M186 160 v-36" stroke="#2F5D46" stroke-width="4"/><path d="M186 124 q-18 -4 -24 8 q12 -10 24 -8 q-6 -16 -22 -14 q14 -2 22 14 q8 -16 24 -12 q-16 0 -24 12 q16 -6 26 6 q-14 -8 -26 -6z"/></g>
+</svg>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <!-- Ligne technique portant la taxe fixe « 1DT Timbre fiscal » du plan comptable tunisien -->
+    <record id="product_timbre_fiscal" model="product.product">
+        <field name="name">Droit de timbre</field>
+        <field name="default_code">QF-TIMBRE</field>
+        <field name="type">service</field>
+        <field name="list_price">0.0</field>
+        <field name="sale_ok" eval="False"/>
+        <field name="purchase_ok" eval="False"/>
+    </record>
+
+    <record id="report_layout_qafila" model="report.layout">
+        <field name="name">Qafila</field>
+        <field name="sequence">1</field>
+        <field name="view_id" ref="qafila_facture.external_layout_qafila"/>
+    </record>
+</odoo>

@@ -1,0 +1,23 @@
+; Qafila — configuration Odoo 19 (générée par install.sh → .runtime/odoo.conf)
+; Les valeurs __XXX__ sont remplacées à partir de .env. Ne jamais committer le fichier généré.
+[options]
+admin_passwd = __ODOO_MASTER_PASSWORD__
+db_host = __DB_HOST__
+db_port = 5432
+db_user = __POSTGRES_USER__
+db_password = __POSTGRES_PASSWORD__
+db_name = __ODOO_DB__
+dbfilter = ^__ODOO_DB__$
+list_db = False
+proxy_mode = True
+http_interface = 0.0.0.0
+http_port = 8069
+addons_path = /mnt/extra-addons,/usr/lib/python3/dist-packages/odoo/addons
+data_dir = /var/lib/odoo
+; Mode threadé : la RAM du modèle est limitée (voir docs/03-ARCHITECTURE.md)
+workers = 0
+max_cron_threads = 1
+limit_time_cpu = 120
+limit_time_real = 240
+without_demo = True
+log_level = info

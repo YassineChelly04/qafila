@@ -1,0 +1,152 @@
+// Qafila — tableau d'exploitation.
+// Système : neutres légèrement teintés, un seul accent (Bleu Sidi Bou Saïd) pour liens et données,
+// filets 1 px plutôt qu'ombres, rayon 6 px, échelle typo 12/13/14/16/22 px, pas d'animation décorative.
+$ink: #16213A;
+$text-2: #4E5566;          // texte secondaire (contraste ≥ 7:1 sur blanc)
+$text-3: #6B7180;          // métadonnées
+$bg: #F5F4F0;
+$surface: #FFFFFF;
+$line: #E4E0D6;
+$line-soft: #EFECE5;
+$accent: #1F5FAD;
+// Carte des statuts (identique sur tout l'écran, toujours avec un mot)
+$st-success: #2F6B4F;  $st-success-bg: #E6F0EA;
+$st-info:    #1F5FAD;  $st-info-bg:    #E5EDF7;
+$st-warning: #8A5A12;  $st-warning-bg: #F8EEDC;  $st-warning-fill: #C9922E;
+$st-critical:#A63D24;  $st-critical-bg:#F8E6E1;
+$st-neutral: #4E5566;  $st-neutral-bg: #EEEDE9;  $st-neutral-fill: #9AA0AC;
+
+.qf-ops {
+    height: 100%;
+    overflow: auto;
+    background: $bg;
+    color: $ink;
+    font-family: "Familjen Grotesk", system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.45;
+    font-variant-numeric: tabular-nums;
+
+    &__page { max-width: 1360px; margin: 0 auto; padding: 20px 24px 40px; display: flex; flex-direction: column; gap: 16px; }
+    &__head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
+    &__title { margin: 0; font-family: "Funnel Display", "Familjen Grotesk", sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.01em; }
+    &__meta { margin: 2px 0 0; color: $text-3; font-size: 13px; }
+    button { font: inherit; color: inherit; }
+}
+
+// ---------- briques communes ----------
+.qf-panel { background: $surface; border: 1px solid $line; border-radius: 6px; padding: 14px 16px; min-width: 0; }
+.qf-panel__head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px;
+    &--stack { flex-direction: column; align-items: flex-start; gap: 2px; } }
+.qf-h2 { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: -0.005em; }
+.qf-h3 { margin: 16px 0 6px; font-size: 13px; font-weight: 700; color: $text-2; }
+.qf-count { display: inline-block; margin-left: 6px; padding: 0 7px; border-radius: 4px; background: $st-neutral-bg; color: $text-2; font-size: 12px; font-weight: 600; vertical-align: 2px; }
+.qf-ops .qf-link { background: none; border: 0; padding: 0; color: $accent; font-size: 13px; font-weight: 600; cursor: pointer; text-align: left;
+    &:hover { text-decoration: underline; } }
+.qf-muted { color: $text-3; }
+.qf-small { font-size: 13px; }
+.qf-strong { font-weight: 600; }
+.qf-nowrap { white-space: nowrap; }
+.qf-ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 1px; }
+.qf-r { text-align: right !important; }
+.qf-num { font-variant-numeric: tabular-nums; }
+.qf-text-critical { color: $st-critical !important; font-weight: 600; }
+.qf-empty { margin: 0; color: $text-3; font-size: 13px; }
+
+// Pastilles : fond teinté + texte foncé + mot, couleurs fixes
+.qf-badge { display: inline-block; padding: 1px 7px; border-radius: 4px; font-size: 12px; font-weight: 600; white-space: nowrap; line-height: 18px;
+    &--success, &--st-disponible { background: $st-success-bg; color: $st-success; }
+    &--info, &--st-en_tournee { background: $st-info-bg; color: $st-info; }
+    &--warning, &--st-maintenance { background: $st-warning-bg; color: $st-warning; }
+    &--critical, &--st-immobilise { background: $st-critical-bg; color: $st-critical; }
+    &--neutral { background: $st-neutral-bg; color: $st-neutral; } }
+.qf-fill--disponible { background: $st-success; }
+.qf-fill--en_tournee { background: $st-info; }
+.qf-fill--maintenance { background: $st-warning-fill; }
+.qf-fill--immobilise { background: $st-critical; }
+
+// ---------- À traiter ----------
+.qf-attn .qf-h2 { margin-bottom: 8px; }
+.qf-attn__list { list-style: none; margin: 0; padding: 0; }
+.qf-attn__row { width: 100%; display: grid; grid-template-columns: 92px minmax(0, auto) minmax(0, 1fr) 16px; align-items: center; gap: 12px;
+    border: 0; border-top: 1px solid $line-soft; background: none; padding: 8px 4px; text-align: left; cursor: pointer;
+    &:hover { background: #FAF9F6; }
+    .qf-badge { justify-self: start; } }
+.qf-attn__list li:first-child .qf-attn__row { border-top: 0; }
+.qf-attn__text { font-weight: 600; white-space: nowrap; }
+.qf-attn__detail { color: $text-3; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qf-attn__go { color: $text-3; }
+
+// ---------- Bandeau d'indicateurs : cellules séparées par des filets ----------
+.qf-band { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; background: $surface; border: 1px solid $line; border-radius: 6px; }
+.qf-band__cell { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; border: 0; border-left: 1px solid $line; background: none; text-align: left; cursor: pointer; min-width: 0;
+    &:first-child { border-left: 0; }
+    &:hover:not(.qf-band__cell--anchor) { background: #FAF9F6; }
+    &--anchor { cursor: default; } }
+.qf-band__label { font-size: 13px; color: $text-2; font-weight: 600; }
+.qf-ops .qf-band__label.qf-link { color: $text-2; &:hover { color: $accent; } }
+.qf-band__anchor { display: flex; align-items: center; gap: 20px; }
+.qf-band__big { font-family: "Funnel Display", sans-serif; font-weight: 700; font-size: 44px; line-height: 1; letter-spacing: -0.02em; }
+.qf-band__split { display: flex; flex-direction: column; gap: 2px;
+    .qf-link.qf-link { color: $ink; font-weight: 400; b { font-weight: 700; } &:hover { color: $accent; } } }
+.qf-band__value { font-family: "Funnel Display", sans-serif; font-weight: 700; font-size: 22px; line-height: 1.15; letter-spacing: -0.01em; white-space: nowrap; }
+.qf-band__ctx { font-size: 12px; color: $text-3; font-weight: 400; }
+.qf-ops .qf-band__ctx.qf-link { color: $text-3; &:hover { color: $accent; } }
+
+// ---------- Mises en page ----------
+.qf-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start;
+    &--main { grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); } }
+@media (max-width: 1100px) {
+    .qf-band { grid-template-columns: 1fr 1fr; }
+    .qf-band__cell:nth-child(3) { border-left: 0; }
+    .qf-band__cell:nth-child(n+3) { border-top: 1px solid $line; }
+    .qf-cols, .qf-cols--main { grid-template-columns: 1fr; }
+}
+
+// ---------- Tableaux ----------
+.qf-table-wrap { overflow-x: auto; margin: 0 -16px; padding: 0; }
+.qf-stack { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.qf-table { width: 100%; border-collapse: collapse; table-layout: fixed;
+    th { position: sticky; top: 0; background: $surface; font-size: 12px; font-weight: 600; color: $text-3; text-align: left;
+        padding: 6px 12px; border-bottom: 1px solid $line; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    td { padding: 0 12px; height: 40px; border-bottom: 1px solid $line-soft; font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    th:first-child, td:first-child { padding-left: 16px; }
+    th:last-child, td:last-child { padding-right: 16px; }
+    tbody tr { cursor: pointer; &:hover td { background: #FAF9F6; } }
+    td.qf-ellipsis { max-width: none; } }
+.qf-more { display: block; padding: 10px 16px 0; }
+
+// ---------- Flotte ----------
+.qf-seg { display: flex; gap: 2px; height: 10px; border-radius: 3px; overflow: hidden; background: $line-soft; }
+.qf-seg__part { display: block; min-width: 6px; }
+.qf-legend { list-style: none; padding: 0; margin: 8px 0 0; display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; color: $text-2;
+    b { color: $ink; } }
+.qf-dot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; vertical-align: 1px; }
+.qf-rows { list-style: none; margin: 0; padding: 0; }
+.qf-rows__row { width: 100%; display: grid; grid-template-columns: 96px minmax(0, 1fr) auto; gap: 10px; align-items: center;
+    border: 0; border-top: 1px solid $line-soft; background: none; padding: 7px 2px; text-align: left; cursor: pointer; font-size: 13.5px;
+    &:hover { background: #FAF9F6; }
+    .qf-ellipsis { max-width: none; } }
+
+// ---------- Barres (série unique, accent) ----------
+.qf-bars { position: relative; display: flex; flex-direction: column; }
+.qf-bar { display: grid; grid-template-columns: minmax(120px, 34%) 1fr 110px; align-items: center; gap: 12px;
+    border: 0; background: none; padding: 6px 0; text-align: left; cursor: pointer; font-size: 13.5px;
+    &:hover .qf-bar__fill { background: darken($accent, 8%); } }
+.qf-bar__name { max-width: none; }
+.qf-bar__track { height: 10px; }
+.qf-bar__fill { display: block; height: 100%; background: $accent; border-radius: 0 3px 3px 0; min-width: 3px; }
+.qf-bar__value { text-align: right; }
+.qf-tip { position: absolute; pointer-events: none; z-index: 5; background: $ink; color: #fff; padding: 4px 8px; border-radius: 4px; font-size: 12px; white-space: nowrap; }
+.qf-ops .qf-foot { display: block; margin-top: 12px; padding-top: 10px; border-top: 1px solid $line-soft !important; width: 100%; color: $text-2 !important; font-weight: 400 !important;
+    b { color: $ink; } &:hover { color: $accent !important; } }
+
+// ---------- États ----------
+.qf-state { color: $st-critical; }
+.qf-skel { display: flex; flex-direction: column; gap: 10px; }
+.qf-band.qf-skel { flex-direction: row; padding: 16px; gap: 16px; }
+.qf-skel__line { display: block; height: 12px; border-radius: 3px; background: $line-soft; }
+.qf-skel__block { flex: 1; height: 64px; border-radius: 4px; background: $line-soft; }
+@media (prefers-reduced-motion: no-preference) {
+    .qf-skel__line, .qf-skel__block { animation: qf-pulse 1.4s ease-in-out infinite; }
+}
+@keyframes qf-pulse { 50% { opacity: .55; } }

@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Titre et favicon Qafila sur toutes les pages servies par Odoo -->
+    <template id="layout_branding" inherit_id="web.layout" name="Qafila — titre et favicon">
+        <xpath expr="//title" position="replace">
+            <title t-esc="title or 'Qafila — ERP'"/>
+        </xpath>
+        <xpath expr="//link[@rel='shortcut icon']" position="replace">
+            <link rel="icon" type="image/png" href="/qafila_branding/static/img/favicon.png"/>
+            <meta name="theme-color" content="#16213A"/>
+        </xpath>
+    </template>
+
+    <!-- Page de connexion Qafila -->
+    <template id="login_layout_branding" inherit_id="web.login_layout" name="Qafila — page de connexion">
+        <xpath expr="//div[hasclass('container')]" position="replace">
+            <main class="qf-login">
+                <section class="qf-login__brand" aria-hidden="true">
+                    <img class="qf-login__logo" src="/qafila_branding/static/img/qafila-logo-white.svg" alt=""/>
+                    <div class="qf-login__pitch">
+                        <p class="qf-login__kicker">ERP · Espace équipe</p>
+                        <p class="qf-login__title">La route est tracée.</p>
+                        <p class="qf-login__text">Commandes, entrepôts de Radès et Sfax, livraisons et factures en dinars — au même endroit.</p>
+                    </div>
+                    <svg class="qf-login__route" viewBox="0 0 400 120" preserveAspectRatio="xMidYMid meet">
+                        <path d="M8 90 C 80 90 110 30 190 40 S 320 100 390 32" fill="none" stroke="#C27C2C" stroke-width="2" stroke-dasharray="6 8"/>
+                        <circle cx="8" cy="90" r="6" fill="#C27C2C"/>
+                        <circle cx="190" cy="40" r="6" fill="#C27C2C"/>
+                        <circle cx="390" cy="32" r="8" fill="#B4472A"/>
+                    </svg>
+                </section>
+                <section class="qf-login__panel">
+                    <div t-attf-class="qf-login__card {{login_card_classes}} o_database_list">
+                        <img class="qf-login__logo-sm" src="/qafila_branding/static/img/qafila-logo.svg" alt="Qafila"/>
+                        <h1 class="qf-login__h1">Connexion</h1>
+                        <t t-out="0"/>
+                        <p class="qf-login__foot" t-if="not disable_footer">
+                            Qafila Logistique · Radès, Tunisie · <a href="https://qafila.tn">qafila.tn</a>
+                        </p>
+                    </div>
+                </section>
+            </main>
+        </xpath>
+    </template>
+</odoo>

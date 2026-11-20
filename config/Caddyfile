@@ -1,0 +1,74 @@
+# Qafila — reverse proxy, TLS local et répartition de charge
+{
+	# Autorité de certification locale : aucun domaine n'est acheté.
+	# Le certificat racine est exporté par install.sh puis approuvé par scripts/sudo-setup.sh
+	local_certs
+	admin off
+}
+
+(securite) {
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		-Server
+	}
+}
+
+(odoo_backends) {
+	# Mono-hôte : "odoo-1:8069 odoo-2:8069" — HA : "IP_NŒUD1:8069 IP_NŒUD2:8069"
+	reverse_proxy {$ODOO_UPSTREAMS} {
+		lb_policy cookie qafila_lb
+		lb_try_duration 10s
+		fail_duration 30s
+		health_uri /web/health
+		health_interval 10s
+		health_timeout 5s
+	}
+}
+
+# ---------- Site vitrine ----------
+www.qafila.tn {
+	redir https://qafila.tn{uri} permanent
+}
+
+qafila.tn {
+	import securite
+	encode zstd gzip
+	header {
+		X-Frame-Options "DENY"
+		Content-Security-Policy "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+	}
+
+	# Demande de devis → piste CRM dans Odoo
+	handle /api/devis {
+		rewrite * /qafila/api/lead
+		import odoo_backends
+	}
+	# Suivi d'expédition (statut uniquement)
+	handle /api/suivi {
+		rewrite * /qafila/api/track?{query}
+		import odoo_backends
+	}
+
+	handle {
+		root * /srv/landing
+		header /assets/* Cache-Control "public, max-age=604800"
+		try_files {path} {path}/index.html
+		file_server
+	}
+}
+
+# ---------- ERP ----------
+erp.qafila.tn {
+	import securite
+	encode zstd gzip
+	header X-Frame-Options "SAMEORIGIN"
+
+	# Gestionnaire de bases de données désactivé côté proxy
+	@dbmanager path /web/database/*
+	respond @dbmanager "Accès refusé" 403
+
+	import odoo_backends
+}

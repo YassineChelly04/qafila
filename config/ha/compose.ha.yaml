@@ -1,0 +1,74 @@
+# Qafila — pile d'un NŒUD HA (qafila-node1 = primaire, qafila-node2 = secours)
+# Utilisé par install.sh quand QAFILA_ROLE=primary|standby (voir docs/03-ARCHITECTURE.md).
+#
+#                IP virtuelle (keepalived) = qafila.tn / erp.qafila.tn
+#          ┌───────────────────────┴───────────────────────┐
+#     node1 : Caddy ─► Odoo(n1)+Odoo(n2)          node2 : Caddy ─► Odoo(n1)+Odoo(n2)
+#             PostgreSQL PRIMAIRE ──réplication──►        PostgreSQL SECOURS
+#
+# Réseau « host » : Odoo joint PostgreSQL via l'IP virtuelle, ce que le réseau rootless
+# isolé ne permet pas de façon fiable. L'exposition est contrôlée par firewalld
+# (scripts/ha/node-setup.sh : 5432 et 8069 ouverts uniquement au nœud pair).
+name: qafila
+
+services:
+  db:
+    container_name: qafila-db
+    image: docker.io/library/postgres:16-alpine
+    network_mode: host
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    command: ["postgres", "-c", "wal_level=replica", "-c", "max_wal_senders=5", "-c", "wal_keep_size=512MB",
+              "-c", "hot_standby=on", "-c", "listen_addresses=*"]
+    volumes:
+      - qafila-pg:/var/lib/postgresql/data:Z
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -h 127.0.0.1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  odoo-1:
+    container_name: qafila-odoo-1
+    image: docker.io/library/odoo:19.0
+    network_mode: host
+    command: ["odoo", "-c", "/etc/odoo/odoo.conf"]
+    volumes:
+      - ./.runtime/odoo.conf:/etc/odoo/odoo.conf:ro,Z
+      - ./addons:/mnt/extra-addons:ro,z
+      - qafila-filestore:/var/lib/odoo:z
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 1g
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8069/web/health',timeout=5)"]
+      interval: 20s
+      timeout: 8s
+      retries: 5
+      start_period: 60s
+
+  caddy:
+    container_name: qafila-caddy
+    image: docker.io/library/caddy:2-alpine
+    network_mode: host
+    environment:
+      ODOO_UPSTREAMS: "${NODE1_IP}:8069 ${NODE2_IP}:8069"
+    volumes:
+      - ./config/Caddyfile:/etc/caddy/Caddyfile:ro,Z
+      - ./landing:/srv/landing:ro,z
+      - caddy-data:/data:Z
+      - caddy-config:/config:Z
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 128m
+
+volumes:
+  qafila-pg: {}
+  qafila-filestore: {}
+  caddy-data: {}     # cloné depuis le modèle → même autorité de certification sur les deux nœuds
+  caddy-config: {}

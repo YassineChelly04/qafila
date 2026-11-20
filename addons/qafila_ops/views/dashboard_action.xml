@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="action_qafila_dashboard" model="ir.actions.client">
+        <field name="name">Tableau de bord</field>
+        <field name="tag">qafila_dashboard</field>
+    </record>
+
+    <!-- Premier menu de l'ERP : c'est aussi l'action d'accueil des utilisateurs (scripts/seed.py) -->
+    <menuitem id="menu_qafila_dashboard_root" name="Tableau de bord" sequence="0"
+              action="action_qafila_dashboard" web_icon="qafila_ops,static/description/icon.png"/>
+</odoo>

@@ -1,0 +1,36 @@
+// Polices Qafila (OFL, auto-hébergées) + Thmanyah pour l'arabe si présente (usage scolaire, non redistribuée)
+@font-face {
+    font-family: "Familjen Grotesk";
+    src: url("/qafila_branding/static/fonts/FamiljenGrotesk.woff2") format("woff2");
+    font-weight: 400 700;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Familjen Grotesk";
+    src: url("/qafila_branding/static/fonts/FamiljenGrotesk-Italic.woff2") format("woff2");
+    font-weight: 400 700;
+    font-style: italic;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Funnel Display";
+    src: url("/qafila_branding/static/fonts/FunnelDisplay.woff2") format("woff2");
+    font-weight: 300 800;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Thmanyah Sans";
+    src: url("/qafila_branding/static/fonts/thmanyah/thmanyah-sans-regular.woff2") format("woff2");
+    font-weight: 400;
+    font-display: swap;
+    unicode-range: U+0600-06FF, U+0750-077F, U+FB50-FDFF, U+FE70-FEFF;
+}
+@font-face {
+    font-family: "Thmanyah Sans";
+    src: url("/qafila_branding/static/fonts/thmanyah/thmanyah-sans-bold.woff2") format("woff2");
+    font-weight: 700;
+    font-display: swap;
+    unicode-range: U+0600-06FF, U+0750-077F, U+FB50-FDFF, U+FE70-FEFF;
+}
