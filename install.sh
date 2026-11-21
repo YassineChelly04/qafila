@@ -73,13 +73,16 @@ for _ in $(seq 1 60); do
   sleep 2
 done
 
-DB_ONCE=()   # options de connexion ajoutées aux commandes Odoo ponctuelles (HA : base locale)
+# Commandes Odoo ponctuelles. En HA (première installation), elles visent la base LOCALE :
+# l'IP virtuelle n'existe pas encore. Le point d'entrée de l'image Odoo lit db_host dans le
+# fichier de configuration (et ignore --db_host) : on leur donne donc un fichier dédié.
+ONCE_CONF=.runtime/odoo.conf
 odoo_once() {
   podman run --rm -i "${NET_OPT[@]}" \
-    -v "$PWD/.runtime/odoo.conf:/etc/odoo/odoo.conf:ro,Z" \
+    -v "$PWD/$ONCE_CONF:/etc/odoo/odoo.conf:ro,Z" \
     -v "$PWD/addons:/mnt/extra-addons:ro,z" \
     -v qafila_qafila-filestore:/var/lib/odoo:z \
-    "$ODOO_IMAGE" "$@" "${DB_ONCE[@]}"
+    "$ODOO_IMAGE" "$@"
 }
 
 if [[ "$ROLE" != single ]]; then
@@ -111,7 +114,9 @@ if [[ "$ROLE" != single ]]; then
     fi
   fi
   # Première installation : la VIP n'existe pas encore (Caddy pas démarré) → base locale directe
-  DB_ONCE=(--db_host 127.0.0.1)
+  ONCE_CONF=.runtime/odoo.once.conf
+  podman unshare sh -c "rm -f $ONCE_CONF && sed -E 's/^db_host[[:space:]]*=.*/db_host = 127.0.0.1/' .runtime/odoo.conf > $ONCE_CONF \
+    && chown 100:101 $ONCE_CONF && chmod 400 $ONCE_CONF"
   say "Autorisation de la réplication entre $NODE1_IP et $NODE2_IP"
   podman exec -i qafila-db psql -U "$POSTGRES_USER" -d postgres -v ON_ERROR_STOP=1 >/dev/null <<SQL
 DO \$\$ BEGIN
