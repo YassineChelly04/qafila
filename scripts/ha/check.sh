@@ -9,7 +9,7 @@
 #     et que la base derrière la VIP est elle aussi primaire, la base locale est une ancienne primaire
 #     périmée (l'autre nœud a été promu pendant notre panne). On l'arrête et on la marque « clôturée »
 #     pour qu'elle ne reprenne jamais la VIP avec des données anciennes. Réintégration : init-standby.sh.
-#  3. Caddy local doit répondre sur https://erp…/web/health.
+#  3. Caddy local doit répondre sur https://erp…/web/health (quel que soit l'état d'Odoo).
 set -uo pipefail
 source "${QAFILA_HA_ENV:-/etc/qafila/ha.env}"
 STATE_DIR=${QAFILA_STATE_DIR:-/var/lib/qafila}
@@ -47,8 +47,13 @@ case $(db_role "${LOCAL_DB_HOST:-127.0.0.1}" "${LOCAL_DB_PORT:-5432}") in
     fi ;;
 esac
 
+# Caddy doit répondre (n'importe quel code HTTP). On n'exige PAS qu'Odoo réponde :
+#  - Odoo joint la base via l'IP virtuelle → au premier démarrage il attend la VIP, qui
+#    attendrait Odoo : interblocage ;
+#  - Caddy répartit déjà sur les Odoo des DEUX nœuds : un Odoo en panne est contourné sans bascule.
 if [[ ${CHECK_HTTP:-1} == 1 ]]; then
-  curl -skf -o /dev/null --max-time 2 --resolve "$QAFILA_ERP_DOMAIN:443:127.0.0.1" \
-    "https://$QAFILA_ERP_DOMAIN/web/health" || exit 1
+  code=$(curl -sk -o /dev/null -w '%{http_code}' --max-time 2 --resolve "$QAFILA_ERP_DOMAIN:443:127.0.0.1" \
+    "https://$QAFILA_ERP_DOMAIN/web/health")
+  [[ $code != 000 ]] || exit 1
 fi
 exit 0
