@@ -26,6 +26,33 @@ Sauvegardes chiffrées PostgreSQL + filestore hors site, supervision et alertes
 
 Prévoir au minimum trois hôtes indépendants pour le quorum et la tolérance à la panne d'un hôte, un stockage réseau redondant, un répartiteur avec contrôle de santé et une procédure de restauration testée. Toutes les instances Odoo doivent partager la même base PostgreSQL et le même filestore. Une réplique PostgreSQL seule ne rend pas Odoo hautement disponible. L'hôte présent n'a qu'environ 3,5 Gio de RAM et ne peut héberger en sécurité toutes ces briques ni maintenir le service en cas de panne de l'hôte. La configuration multi-nœuds, TLS public, bascule automatique et sauvegardes externes nécessitent des serveurs/réseau/DNS supplémentaires et ne sont pas activés ici.
 
+## Haute disponibilité à deux nœuds (implémentée)
+
+```text
+               IP virtuelle (keepalived) = qafila.tn / erp.qafila.tn
+             ┌──────────────────────┴──────────────────────┐
+      qafila-node1                                   qafila-node2
+  Caddy → Odoo n1 + Odoo n2                     Caddy → Odoo n1 + Odoo n2
+  PostgreSQL PRIMAIRE ──réplication continue──►  PostgreSQL RÉPLIQUE
+```
+
+- **Une seule adresse** : les clients visent l'IP virtuelle. keepalived la place sur un nœud sain ; si ce nœud tombe, elle passe sur l'autre en ~10 s.
+- **Base répliquée en continu** : chaque écriture du primaire est rejouée sur la réplique. Les pièces jointes sont stockées en base, donc répliquées aussi.
+- **Bascule automatique** : le nœud qui reçoit l'IP virtuelle promeut sa réplique en primaire. Odoo se connecte toujours via l'IP virtuelle, il suit donc sans reconfiguration.
+- **Pas de « cerveau divisé »** : un ancien primaire qui revient après une panne ne reprend pas l'IP (`nopreempt`). Il détecte qu'un autre primaire sert l'IP, arrête sa base et se marque « clôturé ». Il n'est réintégré, comme réplique, que par `init-standby.sh`.
+
+**Mise en place** (deux VM clonées du modèle, `.env` identique sauf `QAFILA_ROLE`) :
+
+1. nœud 1 (`QAFILA_ROLE=primary`) : `sudo ./scripts/ha/node-setup.sh` puis `./install.sh`
+2. nœud 2 (`QAFILA_ROLE=standby`) : `sudo ./scripts/ha/node-setup.sh`, `./scripts/ha/init-standby.sh`, puis `./install.sh`
+3. sur chaque nœud : `./scripts/ha/status.sh`
+
+**Démonstration de bascule** : arrêter le nœud 1 (`sudo poweroff`) → `erp.qafila.tn` répond toujours, servi par le nœud 2 dont la base est devenue primaire (`status.sh`). Au retour, le nœud 1 s'affiche « CLÔTURÉ » : `./scripts/ha/init-standby.sh` puis `./install.sh` le réintègre comme réplique.
+
+**Sans deuxième VM** : `./scripts/ha/lab-test.sh` rejoue réplication, panne, promotion, clôture et réintégration avec deux PostgreSQL jetables sur cette machine (16 vérifications, ~1 min).
+
+**Limites assumées (deux nœuds, sans arbitre)** : la réplication est asynchrone, donc la dernière seconde d'écritures peut être perdue lors d'une bascule. Si les deux nœuds tombent l'un après l'autre, le premier revenu peut avoir des données anciennes. Une production réelle ajoute un troisième nœud arbitre (Patroni + etcd, voir ci-dessus).
+
 ## Exploitation
 
 - État : `podman ps`

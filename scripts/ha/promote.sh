@@ -1,19 +1,22 @@
 #!/usr/bin/env bash
 # Qafila — appelé par keepalived (notify_master) quand ce nœud récupère l'IP virtuelle.
-# Si la base locale est une réplique, elle est promue en primaire : Odoo (via la VIP) reprend l'écriture.
-# Peut aussi être lancé à la main lors de la démonstration de bascule.
+# Installé par node-setup.sh en /usr/libexec/keepalived/qafila-promote.
+# Si la base locale est une réplique, elle est promue en primaire : Odoo (qui passe par la VIP)
+# reprend l'écriture sur ce nœud. Lancement manuel possible : sudo /usr/libexec/keepalived/qafila-promote
 set -uo pipefail
-source /etc/sysconfig/qafila 2>/dev/null || QAFILA_USER=$(id -un)
-cd "$(dirname "$0")/../.."
-set -a; source .env; set +a
+source "${QAFILA_HA_ENV:-/etc/qafila/ha.env}"
+export PGPASSWORD=$POSTGRES_PASSWORD PGCONNECT_TIMEOUT=3
+q() { ${QAFILA_PSQL:-psql} -h "${LOCAL_DB_HOST:-127.0.0.1}" -p "${LOCAL_DB_PORT:-5432}" \
+        -U "$POSTGRES_USER" -d postgres -XtAc "$1" 2>/dev/null | tr -d '[:space:]'; }
 
-as_user() { if [[ $EUID -eq 0 ]]; then runuser -l "$QAFILA_USER" -c "$*"; else bash -c "$*"; fi; }
-in_recovery=$(as_user "podman exec qafila-db psql -U $POSTGRES_USER -d postgres -tAc 'select pg_is_in_recovery()'" 2>/dev/null | tr -d '[:space:]')
-
-if [[ "$in_recovery" == "t" ]]; then
-  as_user "podman exec qafila-db psql -U $POSTGRES_USER -d postgres -tAc 'select pg_promote()'"
-  logger -t qafila-ha "Base promue en PRIMAIRE sur $(hostname) (bascule)"
-  echo "✔ Base promue en primaire."
+if [[ $(q "select pg_is_in_recovery()") == t ]]; then
+  if [[ $(q "select pg_promote(true, 30)") == t ]]; then
+    logger -t qafila-ha "Base promue en PRIMAIRE sur $(hostname) (bascule)"
+    echo "✔ Base promue en primaire."
+  else
+    logger -t qafila-ha "ÉCHEC de la promotion de la base sur $(hostname)"
+    echo "✘ Échec de la promotion." >&2; exit 1
+  fi
 else
   logger -t qafila-ha "$(hostname) maître VRRP ; base déjà primaire (rien à faire)"
   echo "Base déjà primaire."

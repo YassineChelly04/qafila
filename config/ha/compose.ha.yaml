@@ -20,8 +20,11 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    # max_slot_wal_keep_size : si la réplique reste éteinte longtemps, le primaire cesse de garder
+    # ses WAL au-delà de 2 Go (sinon le disque du primaire se remplit et TOUT s'arrête) ;
+    # la réplique devra alors être reconstruite avec init-standby.sh.
     command: ["postgres", "-c", "wal_level=replica", "-c", "max_wal_senders=5", "-c", "wal_keep_size=512MB",
-              "-c", "hot_standby=on", "-c", "listen_addresses=*"]
+              "-c", "max_slot_wal_keep_size=2GB", "-c", "hot_standby=on", "-c", "listen_addresses=*"]
     volumes:
       - qafila-pg:/var/lib/postgresql/data:Z
     restart: unless-stopped

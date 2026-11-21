@@ -36,14 +36,21 @@ browser ──https──► Caddy :443 (qafila.tn → landing/, erp.qafila.tn �
 ```
 
 - Implemented in `config/ha/compose.ha.yaml` (one Odoo per node, **host networking** because rootless container networks cannot reliably reach the host-held VIP; exposure is limited by firewalld rich rules: 5432/8069 only from the peer node).
-- `QAFILA_ROLE` in `.env` selects the stack: `single` (template, `compose.yaml`), `primary` (node1) or `standby` (node2). `install.sh` handles all three; on `standby` it never creates/seeds the DB.
-- Node scripts: `scripts/ha/node-setup.sh` (sudo: keepalived from `config/ha/keepalived.conf.tmpl`, firewall, hosts), `init-standby.sh [primary_ip]` (pg_basebackup -R with a replication slot), `promote.sh` (keepalived `notify_master` → `pg_promote()` if in recovery), `status.sh`.
+- Odoo on both nodes connects to PostgreSQL **through the VIP**; the standby's `primary_conninfo` also points to the VIP, so after a failover nothing needs reconfiguring.
+- `QAFILA_ROLE` in `.env` (`single` | `primary` | `standby`) only drives the **first** install (hostname, keepalived priority 150/100, who creates the DB). After that, `install.sh` reads the **real** role from the local DB (`pg_is_in_recovery()`), because roles swap after a failover. It refuses to run on a fenced node or on a primary while another primary serves the VIP.
+- **keepalived** (`config/ha/keepalived.conf.tmpl`): both nodes `state BACKUP` + `nopreempt` (a node that comes back never takes the VIP back → no split brain), health script without `weight` (failure ⇒ FAULT ⇒ VIP released), `notify_master` ⇒ promote.
+- Root scripts are installed by `node-setup.sh` into `/usr/libexec/keepalived/` (root-owned; that path has the SELinux type `keepalived_unconfined_script_exec_t`). Scripts in the user-owned project dir would be refused by `enable_script_security` and blocked by SELinux. Their settings/secrets: `/etc/qafila/ha.env` (0600). Re-run `node-setup.sh` after editing `scripts/ha/check.sh` or `promote.sh`.
+  - `qafila-check` (= `scripts/ha/check.sh`, every 5 s): local PostgreSQL up, local Caddy serves `/web/health`, and **fencing**: local DB primary + VIP elsewhere + the DB behind the VIP is primary ⇒ this node is a stale ex-primary ⇒ stop its DB, write `/var/lib/qafila/fenced`, fail forever until rebuilt. The flag clears itself once the local DB runs as a replica.
+  - `qafila-promote` (= `scripts/ha/promote.sh`): `pg_promote()` if the local DB is in recovery.
+- `scripts/ha/init-standby.sh [source]` (default: VIP) rebuilds the local DB as a replica (pg_basebackup -R, replication slot recreated). Used for node2's first setup and to reintegrate a fenced node.
+- `max_slot_wal_keep_size=2GB`: a long-dead replica cannot fill the primary's disk; it then needs `init-standby.sh`.
+- `node-setup.sh` also enables linger + `podman-restart.service` so rootless containers come back after a reboot.
+- `scripts/ha/lab-test.sh`: runs the real `check.sh`/`promote.sh` against two throw-away PostgreSQL (host network, ports 15432/15433) on one machine — replication, failover, fencing, reintegration (16 assertions). Only keepalived/VIP are simulated. Use it to demo HA without two VMs.
 - Caddy upstreams come from env `ODOO_UPSTREAMS` (single: `odoo-1:8069 odoo-2:8069`; HA: `NODE1_IP:8069 NODE2_IP:8069`) — one shared `config/Caddyfile`.
 - The Caddy local CA lives in the `caddy-data` volume; cloning the template VM gives both nodes the same CA (same trusted root).
 - **Attachments stored in the database** (`ir_attachment.location = db`) so PostgreSQL replication covers the filestore — no NFS single point of failure.
-- Odoo on both nodes connect to the DB via `DB_VIP`/primary address; failover = promote standby (`scripts/ha/promote.sh`) + keepalived moves the VIP.
 - Sessions: Odoo filesystem sessions are per node → after a node failover users may need to log in again. Acceptable and documented.
-- Production target (README only): Patroni + etcd (3 nodes) for automatic DB failover, HAProxy, off-site encrypted backups.
+- **Known limits of 2 nodes (no witness):** replication is asynchronous (a failover can lose the last ~second of writes); if node A dies, B takes over, then B dies *before* A comes back, A would restart as primary with stale data — preventing that needs a 3rd voter. Production target (README only): Patroni + etcd (3 nodes), HAProxy, off-site encrypted backups.
 
 ## Local domains (no purchase)
 

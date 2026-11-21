@@ -65,29 +65,45 @@ for _ in $(seq 1 60); do
   sleep 2
 done
 
+DB_ONCE=()   # options de connexion ajoutées aux commandes Odoo ponctuelles (HA : base locale)
 odoo_once() {
   podman run --rm -i "${NET_OPT[@]}" \
     -v "$PWD/.runtime/odoo.conf:/etc/odoo/odoo.conf:ro,Z" \
     -v "$PWD/addons:/mnt/extra-addons:ro,z" \
     -v qafila_qafila-filestore:/var/lib/odoo:z \
-    "$ODOO_IMAGE" "$@"
+    "$ODOO_IMAGE" "$@" "${DB_ONCE[@]}"
 }
 
-if [[ $RESET == 1 && "$ROLE" != standby ]]; then
-  say "Réinitialisation : suppression de la base $ODOO_DB"
-  podman stop qafila-odoo-1 qafila-odoo-2 >/dev/null 2>&1 || true
-  podman exec qafila-db psql -U "$POSTGRES_USER" -d postgres -c "DROP DATABASE IF EXISTS \"$ODOO_DB\" WITH (FORCE)" >/dev/null
-fi
-
-if [[ "$ROLE" == standby ]]; then
-  # La réplique reçoit la base du primaire (scripts/ha/init-standby.sh) : ni création ni données ici.
-  say "Nœud de secours : base répliquée depuis $NODE1_IP, démarrage des services"
-  "${COMPOSE[@]}" up -d >/dev/null
-  say "Terminé. État : ./scripts/ha/status.sh"
-  exit 0
-fi
-
-if [[ "$ROLE" == primary ]]; then
+if [[ "$ROLE" != single ]]; then
+  # En HA, QAFILA_ROLE ne sert qu'à la première installation : après une bascule les rôles
+  # s'inversent. Le rôle RÉEL est lu dans la base locale.
+  if [[ -f /var/lib/qafila/fenced ]] && \
+     [[ $(podman exec qafila-db psql -U "$POSTGRES_USER" -d postgres -tAc "select pg_is_in_recovery()" 2>/dev/null) != t ]]; then
+    podman stop qafila-db >/dev/null 2>&1 || true
+    echo "Ce nœud est CLÔTURÉ : sa base est une ancienne primaire périmée (l'autre nœud a pris le relais)."
+    echo "Réintégrez-le comme réplique : ./scripts/ha/init-standby.sh  puis ./install.sh"
+    exit 1
+  fi
+  if [[ $(podman exec qafila-db psql -U "$POSTGRES_USER" -d postgres -tAc "select pg_is_in_recovery()") == t ]]; then
+    # Réplique : elle reçoit la base du primaire, ni création ni données ici.
+    say "Nœud de secours : base répliquée depuis le primaire (via $VIP), démarrage des services"
+    "${COMPOSE[@]}" up -d >/dev/null
+    say "Terminé. État : ./scripts/ha/status.sh"
+    exit 0
+  fi
+  # Base locale primaire : on refuse si un AUTRE primaire sert déjà l'IP virtuelle.
+  if ! ip -o -4 addr show | grep -q " $VIP/"; then
+    vip_role=$(podman exec -e PGPASSWORD="$POSTGRES_PASSWORD" -e PGCONNECT_TIMEOUT=3 qafila-db \
+      psql -h "$VIP" -U "$POSTGRES_USER" -d postgres -tAc "select pg_is_in_recovery()" 2>/dev/null || true)
+    if [[ "$vip_role" == f || "$ROLE" == standby ]]; then
+      podman stop qafila-db >/dev/null 2>&1 || true
+      echo "La base de ce nœud n'est pas une réplique, alors que le primaire est ailleurs."
+      echo "Initialisez-la comme réplique : ./scripts/ha/init-standby.sh  puis ./install.sh"
+      exit 1
+    fi
+  fi
+  # Première installation : la VIP n'existe pas encore (Caddy pas démarré) → base locale directe
+  DB_ONCE=(--db_host 127.0.0.1)
   say "Autorisation de la réplication entre $NODE1_IP et $NODE2_IP"
   podman exec -i qafila-db psql -U "$POSTGRES_USER" -d postgres -v ON_ERROR_STOP=1 >/dev/null <<SQL
 DO \$\$ BEGIN
@@ -104,6 +120,12 @@ SQL
       echo 'host replication replicator $ip/32 scram-sha-256' >> \$PGDATA/pg_hba.conf"
   done
   podman exec qafila-db psql -U "$POSTGRES_USER" -d postgres -tAc "select pg_reload_conf()" >/dev/null
+fi
+
+if [[ $RESET == 1 ]]; then
+  say "Réinitialisation : suppression de la base $ODOO_DB"
+  podman stop qafila-odoo-1 qafila-odoo-2 >/dev/null 2>&1 || true
+  podman exec qafila-db psql -U "$POSTGRES_USER" -d postgres -c "DROP DATABASE IF EXISTS \"$ODOO_DB\" WITH (FORCE)" >/dev/null
 fi
 
 if podman exec qafila-db psql -U "$POSTGRES_USER" -d postgres -tAc \

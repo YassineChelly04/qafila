@@ -60,6 +60,8 @@ odoo-logistique-ha/
 | 2026-11-20 | Seed: company, 5 real clients, Yassine (admin) + Karim (user), 12 products, 8 orders, 3 invoices, leads | ✅ idempotent (re-run 3×) |
 | 2026-11-20 | `harden.sh`, `backup.sh`, `sudo-setup.sh` | ✅ written; backup tested; sudo scripts must be run by the user |
 | 2026-11-20 | HA node configs (`config/ha`, `scripts/ha`) | ⚠ written, syntax-checked, not tested on real nodes |
+| 2026-11-21 | HA rework: nopreempt, fencing of stale primary, scripts in `/usr/libexec/keepalived` (SELinux + script security), real-role detection in `install.sh`, standby follows VIP, `max_slot_wal_keep_size`, reboot autostart, `lab-test.sh` | ✅ DB failover path verified with `lab-test.sh` (16/16); keepalived/VIP still to test on 2 real VMs |
+| 2026-11-21 | Disk: VM disk is 28 GB but LVM uses 17.4 GB → `scripts/grow-disk.sh` (sudo) | ⏳ user to run |
 | 2026-11-20 | Thmanyah font files | ⏳ waiting for the user to download them (fallback Noto Arabic meanwhile) |
 | 2026-11-20 | README FR + demo scenario | ✅ |
 | 2026-11-20 | Team photos (Yassine admin, Karim user) on site + Odoo avatars | ✅ |
@@ -74,7 +76,7 @@ odoo-logistique-ha/
 
 - Scroll background: `python3 brand/build_world.py` → `landing/assets/img/world.html`. Bump the `?v=` query on the CSS/JS/world links in `landing/index.html` after changes (assets are cached 7 days by Caddy).
 
-- Logo: `python brand/build_brand.py <dir with FunnelDisplay.ttf> [thmanyah.ttf]` (needs fontTools, uharfbuzz, rsvg-convert). With the Thmanyah file it adds «قافلة» to the lockup.
+- Logo: `python brand/build_brand.py brand/fonts [thmanyah.ttf]` (TTF sources of Funnel Display / Familjen Grotesk, OFL, are in `brand/fonts/`) (needs fontTools, uharfbuzz, rsvg-convert). With the Thmanyah file it adds «قافلة» to the lockup.
 - Product illustrations: `python3 brand/build_products.py` (needs Familjen Grotesk installed for rsvg text).
 - After changing anything in `brand/`, copy to `landing/assets/img/` and `addons/qafila_branding/static/img/` and re-run `./install.sh`.
 
