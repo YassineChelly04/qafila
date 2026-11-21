@@ -59,6 +59,14 @@ fi
 
 # 3. Base de données
 say "Démarrage de PostgreSQL"
+# Passage mono-hôte → nœud HA : les conteneurs du modèle (réseau isolé) portent les mêmes noms.
+# On les retire (les volumes, donc les données, sont conservés) pour recréer la pile en réseau « host ».
+if [[ "$ROLE" != single ]] && podman container exists qafila-db \
+   && [[ $(podman inspect -f '{{.HostConfig.NetworkMode}}' qafila-db) != host ]]; then
+  say "Retrait de l'ancienne pile mono-hôte (données conservées)"
+  podman-compose -f compose.yaml down >/dev/null 2>&1 || true
+  podman rm -f qafila-caddy qafila-odoo-1 qafila-odoo-2 qafila-db >/dev/null 2>&1 || true
+fi
 "${COMPOSE[@]}" up -d db >/dev/null
 for _ in $(seq 1 60); do
   podman exec qafila-db pg_isready -U "$POSTGRES_USER" >/dev/null 2>&1 && break
