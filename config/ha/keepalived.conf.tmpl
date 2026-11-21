@@ -35,7 +35,7 @@ vrrp_instance QAFILA_VIP {
         auth_pass __VRRP_PASSWORD__
     }
     virtual_ipaddress {
-        __VIP__/24 dev __IFACE__
+        __VIP__/__PREFIX__ dev __IFACE__
     }
     track_script {
         chk_qafila

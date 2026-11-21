@@ -28,21 +28,27 @@ case "$ROLE" in
   standby) SELF=$N2 ;;
   *) echo "Rôle : primary ou standby."; exit 1 ;;
 esac
-[[ "${N1%.*}" == "${N2%.*}" && "${N1%.*}" == "${VIP%.*}" ]] || { echo "Les 3 adresses doivent être dans le même sous-réseau /24."; exit 1; }
-
 say() { printf '\033[1;34m▸\033[0m %s\n' "$*"; }
 setkey() { if grep -q "^$1=" .env; then sed -i "s|^$1=.*|$1=$2|" .env; else echo "$1=$2" >> .env; fi; }
+ip2int() { local IFS=.; set -- $1; echo $(( ($1<<24) + ($2<<16) + ($3<<8) + $4 )); }
+same_net() { local m=$(( (0xFFFFFFFF << (32-PREFIX)) & 0xFFFFFFFF )); (( ($(ip2int "$1") & m) == ($(ip2int "$2") & m) )); }
+
+# Réseau actuel (DHCP) : interface, passerelle, taille du réseau (/24 box, /28 partage iPhone…)
+IFACE=$(ip -o -4 route show default | awk '{print $5; exit}')
+GW=$(ip -o -4 route show default | awk '{print $3; exit}')
+[[ -n "$IFACE" && -n "$GW" ]] || { echo "Aucune route par défaut : la VM n'a pas de réseau (voir mode pont/NAT de la VM)."; exit 1; }
+PREFIX=$(ip -o -4 addr show dev "$IFACE" | awk '{split($4,a,"/"); print a[2]; exit}')
+[[ -n "$PREFIX" ]] || PREFIX=24
+for ip in "$N1" "$N2" "$VIP"; do
+  same_net "$ip" "$GW" || { echo "$ip n'est pas dans le réseau de la passerelle $GW/$PREFIX. Vérifiez les adresses (ip -4 addr)."; exit 1; }
+done
 
 # 1. Adresse IP statique -------------------------------------------------------
 if [[ $STATIC == 1 ]]; then
-  IFACE=$(ip -o -4 route show default | awk '{print $5; exit}')
-  GW=$(ip -o -4 route show default | awk '{print $3; exit}')
-  [[ -n "$IFACE" && -n "$GW" ]] || { echo "Aucune route par défaut : la VM n'a pas de réseau (voir mode pont/NAT de la VM)."; exit 1; }
-  [[ "${GW%.*}" == "${SELF%.*}" ]] || { echo "La passerelle $GW n'est pas dans le même réseau que $SELF. Vérifiez les adresses (ip -4 addr)."; exit 1; }
   CON=$(nmcli -g GENERAL.CONNECTION device show "$IFACE")
   [[ -n "$CON" ]] || { echo "Connexion NetworkManager introuvable pour $IFACE."; exit 1; }
-  say "Adresse statique $SELF/24 sur $IFACE (connexion « $CON », passerelle $GW)"
-  sudo nmcli con mod "$CON" ipv4.method manual ipv4.addresses "$SELF/24" ipv4.gateway "$GW" ipv4.dns "$GW 1.1.1.1"
+  say "Adresse statique $SELF/$PREFIX sur $IFACE (connexion « $CON », passerelle $GW)"
+  sudo nmcli con mod "$CON" ipv4.method manual ipv4.addresses "$SELF/$PREFIX" ipv4.gateway "$GW" ipv4.dns "$GW 1.1.1.1"
   sudo nmcli con up "$CON" >/dev/null
   sleep 3
 fi
@@ -64,7 +70,7 @@ else
     || { echo "scp a échoué : vérifiez que le nœud 1 est allumé, que sshd tourne et que le projet est au même chemin ($PWD)."; exit 1; }
 fi
 chmod 600 .env
-setkey NODE1_IP "$N1"; setkey NODE2_IP "$N2"; setkey VIP "$VIP"; setkey QAFILA_ROLE "$ROLE"
+setkey NODE1_IP "$N1"; setkey NODE2_IP "$N2"; setkey VIP "$VIP"; setkey NET_PREFIX "$PREFIX"; setkey QAFILA_ROLE "$ROLE"
 
 say "Nœud préparé : rôle $ROLE, adresse $SELF (nœuds : $N1 / $N2, IP virtuelle : $VIP)"
 if [[ "$ROLE" == primary ]]; then

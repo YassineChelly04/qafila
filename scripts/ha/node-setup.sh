@@ -44,7 +44,7 @@ install -o root -g root -m 0755 scripts/ha/promote.sh /usr/libexec/keepalived/qa
 restorecon -R /usr/libexec/keepalived /etc/qafila /var/lib/qafila 2>/dev/null || true
 
 sed -e "s/__ROUTER_ID__/$NAME/; s/__PRIORITY__/$PRIO/" \
-    -e "s/__IFACE__/$IFACE/g; s/__SELF_IP__/$SELF/; s/__PEER_IP__/$PEER/; s/__VIP__/$VIP/" \
+    -e "s/__IFACE__/$IFACE/g; s/__SELF_IP__/$SELF/; s/__PEER_IP__/$PEER/; s/__VIP__/$VIP/; s/__PREFIX__/${NET_PREFIX:-24}/" \
     -e "s/__VRRP_PASSWORD__/$VRRP_PASSWORD/" \
     config/ha/keepalived.conf.tmpl > /etc/keepalived/keepalived.conf
 chmod 600 /etc/keepalived/keepalived.conf
