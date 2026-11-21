@@ -51,9 +51,10 @@ esac
 #  - Odoo joint la base via l'IP virtuelle → au premier démarrage il attend la VIP, qui
 #    attendrait Odoo : interblocage ;
 #  - Caddy répartit déjà sur les Odoo des DEUX nœuds : un Odoo en panne est contourné sans bascule.
+# On interroge /caddy-health, servi par Caddy lui-même : /web/health passerait par Odoo, et sans
+# Odoo joignable Caddy retente pendant lb_try_duration (10 s) → curl (2 s) expirerait → faux échec.
 if [[ ${CHECK_HTTP:-1} == 1 ]]; then
-  code=$(curl -sk -o /dev/null -w '%{http_code}' --max-time 2 --resolve "$QAFILA_ERP_DOMAIN:443:127.0.0.1" \
-    "https://$QAFILA_ERP_DOMAIN/web/health")
-  [[ $code != 000 ]] || exit 1
+  curl -skf -o /dev/null --max-time 2 --resolve "$QAFILA_ERP_DOMAIN:443:127.0.0.1" \
+    "https://$QAFILA_ERP_DOMAIN/caddy-health" || exit 1
 fi
 exit 0

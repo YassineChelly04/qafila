@@ -42,6 +42,9 @@ umask 022
 install -o root -g root -m 0755 scripts/ha/check.sh   /usr/libexec/keepalived/qafila-check
 install -o root -g root -m 0755 scripts/ha/promote.sh /usr/libexec/keepalived/qafila-promote
 restorecon -R /usr/libexec/keepalived /etc/qafila /var/lib/qafila 2>/dev/null || true
+# SELinux : keepalived doit pouvoir lire le groupe de processus de ses scripts, sinon à l'arrêt il
+# envoie SIGTERM à systemd (PID 1) — voir config/ha/qafila-keepalived.cil. Avant tout restart.
+semodule -i config/ha/qafila-keepalived.cil
 
 sed -e "s/__ROUTER_ID__/$NAME/; s/__PRIORITY__/$PRIO/" \
     -e "s/__IFACE__/$IFACE/g; s/__SELF_IP__/$SELF/; s/__PEER_IP__/$PEER/; s/__VIP__/$VIP/; s/__PREFIX__/${NET_PREFIX:-24}/" \

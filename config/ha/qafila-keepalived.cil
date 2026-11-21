@@ -1,0 +1,6 @@
+; Qafila — module SELinux local, installé par scripts/ha/node-setup.sh (semodule -i).
+; keepalived arrête ses scripts de contrôle (qafila-check) via leur groupe de processus.
+; Sans ce droit, getpgid() est refusé et renvoie -1 : keepalived fait alors kill(-(-1)) = kill(1),
+; c.-à-d. envoie SIGTERM à systemd (PID 1), qui se ré-exécute → « D-Bus connection terminated
+; while waiting for jobs » pendant `systemctl restart keepalived`.
+(allow keepalived_t keepalived_unconfined_script_t (process (getpgid)))

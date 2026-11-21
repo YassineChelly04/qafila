@@ -70,5 +70,9 @@ erp.qafila.tn {
 	@dbmanager path /web/database/*
 	respond @dbmanager "Accès refusé" 403
 
+	# Santé du proxy seul (qafila-check / keepalived) : répond sans passer par Odoo,
+	# donc immédiatement même si aucun Odoo n'est joignable (lb_try_duration ci-dessus = 10 s).
+	respond /caddy-health "ok" 200
+
 	import odoo_backends
 }
